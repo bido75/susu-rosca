@@ -1,0 +1,2 @@
+import { NextResponse } from 'next/server';import { db } from '@/lib/db';import { hashToken } from '@/lib/auth';
+export async function POST(req:Request){const {cookies}=await import('next/headers');const token=cookies().get('susuflow_session')?.value;if(token)await db.session.deleteMany({where:{tokenHash:hashToken(token)}});const res=NextResponse.redirect(new URL('/login',req.url),303);res.cookies.delete('susuflow_session');return res;}

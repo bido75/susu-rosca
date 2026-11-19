@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.github
+.env
+.env.local
+*.tsbuildinfo
+coverage
+test-results
+playwright-report
+e2e-server.log
+Dockerfile
+.dockerignore
+docs
