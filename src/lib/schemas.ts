@@ -6,6 +6,7 @@ export const circleCreateSchema = z.object({
   frequency: z.enum(['WEEKLY', 'BIWEEKLY', 'MONTHLY']),
   totalCycles: z.number().int().min(2).max(30),
   mode: z.enum(['LEDGER', 'AUTOMATED_SIMULATED']),
+  fairValueSlots: z.boolean().optional(),
   startDate: z.string().date(),
 });
 

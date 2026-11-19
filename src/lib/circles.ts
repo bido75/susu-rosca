@@ -8,7 +8,7 @@ export async function memberAccess(circleId: string, userId: string) {
   const circle = await db.circle.findUnique({
     where: { id: circleId },
     include: {
-      members: { include: { user: { select: { id: true, fullName: true, susuTrustScore: true } } } },
+      members: { include: { user: { select: { id: true, fullName: true, susuTrustScore: true, email: true, phoneNumber: true } } } },
       cycles: {
         orderBy: { cycleNumber: 'asc' },
         include: { contributions: { include: { user: { select: { id: true, fullName: true } } } } },
@@ -48,7 +48,7 @@ export function ensureForming(circle: Circle) {
 }
 
 export const fullCircle = {
-  members: { include: { user: { select: { id: true, fullName: true, susuTrustScore: true } } } },
+  members: { include: { user: { select: { id: true, fullName: true, susuTrustScore: true, email: true, phoneNumber: true } } } },
   cycles: {
     orderBy: { cycleNumber: 'asc' as const },
     include: { contributions: { include: { user: { select: { id: true, fullName: true } } } } },

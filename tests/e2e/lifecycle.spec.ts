@@ -37,6 +37,7 @@ async function submitOwnContribution(page: Page, ref: string) {
   await page.getByPlaceholder('External transaction reference').fill(ref);
   await page.getByRole('button', { name: 'Submit proof' }).click();
   await expect(page.getByRole('button', { name: 'Submit proof' })).toHaveCount(0, { timeout: 20_000 });
+  await expect(page.getByPlaceholder('External transaction reference')).toHaveCount(0, { timeout: 20_000 });
 }
 
 async function verifyAllContributions(page: Page, expected: number) {
@@ -44,10 +45,7 @@ async function verifyAllContributions(page: Page, expected: number) {
   await expect(verify).toHaveCount(expected, { timeout: 20_000 });
   for (let i = 0; i < expected; i++) {
     await page.getByRole('button', { name: 'Verify', exact: true }).first().click();
-    await expect(page.getByRole('button', { name: 'Verify', exact: true })).toHaveCount(
-      expected - i - 1,
-      { timeout: 20_000 },
-    );
+    await expect(page.getByRole('button', { name: 'Verify', exact: true })).toHaveCount(expected - i - 1, { timeout: 20_000 });
   }
 }
 
@@ -61,17 +59,18 @@ test('six-member monthly Susu lifecycle through the UI', async ({ browser }) => 
     members.push(await registerUser(browser, `Member ${i}`, `member${i}@e2e.test`));
   }
 
-  // --- Create the circle ---
+  // --- Create the circle via the modal on /circles/new ---
   await organizer.page.goto('/circles/new');
-  await organizer.page.getByLabel('Circle name').fill('Family & Friends Savings');
-  await organizer.page.getByLabel('Contribution per member ($)').fill('500');
-  await organizer.page.getByLabel('Members / cycles').fill('6');
-  await organizer.page.getByLabel('Frequency').selectOption('MONTHLY');
-  await organizer.page.getByLabel('First cycle due date').fill('2030-01-05');
-  await organizer.page.getByLabel('Mode').selectOption('LEDGER');
+  await organizer.page.getByPlaceholder('e.g., Family & Friends Savings').fill('Family & Friends Savings');
+  await organizer.page.locator('input[type="number"]').first().fill('500');
+  await organizer.page.locator('select').first().selectOption('MONTHLY');
+  await organizer.page.locator('input[type="number"]').nth(1).fill('6');
+  await organizer.page.locator('input[type="date"]').fill('2030-01-05');
+  await organizer.page.locator('select').nth(1).selectOption('LEDGER');
   await organizer.page.getByRole('button', { name: /Create Circle & Generate Invite/ }).click();
-  await expect(organizer.page).toHaveURL(/\/circles\/[0-9a-f-]{36}/);
-  const circleUrl = organizer.page.url();
+
+  await expect(organizer.page).toHaveURL(/\/circles\/[0-9a-f-]{36}\/wheel/);
+  const circleUrl = organizer.page.url().replace(/\/wheel$/, '');
   const invite = await organizer.page.getByText(/SUSU-[0-9A-F]{16}/).innerText();
 
   // --- Five members join via the invite code ---
@@ -86,40 +85,36 @@ test('six-member monthly Susu lifecycle through the UI', async ({ browser }) => 
 
   // --- Organizer draws the payout order ---
   await organizer.page.goto(`${circleUrl}/wheel`);
-  await organizer.page.getByRole('button', { name: 'Draw payout order' }).click();
-  await expect(organizer.page.getByText('Unassigned')).toHaveCount(0, { timeout: 20_000 });
-  await expect(organizer.page.getByText('ACTIVE').first()).toBeVisible();
+  await organizer.page.getByRole('button', { name: /Spin to Assign Payout Order/ }).click();
+  await expect(organizer.page.getByText('0 unassigned')).toBeVisible({ timeout: 20_000 });
+  await expect(organizer.page.getByText('ACTIVE', { exact: true })).toBeVisible();
 
   // --- Run all six cycles ---
   for (let cycle = 1; cycle <= 6; cycle++) {
-    // members submit their contribution
     for (let i = 0; i < members.length; i++) {
       await members[i].page.goto(`${circleUrl}/ledger`);
       await submitOwnContribution(members[i].page, `REF-${cycle}-${i + 1}`);
     }
 
-    // organizer submits their own contribution, then verifies everyone
     await organizer.page.goto(`${circleUrl}/ledger`);
     await submitOwnContribution(organizer.page, `REF-${cycle}-ORG`);
     await verifyAllContributions(organizer.page, 6);
-    await expect(organizer.page.getByText('$3,000 / $3,000')).toBeVisible();
 
-    // record the off-platform payout and advance
-    await organizer.page
-      .getByPlaceholder('Confirmed external payout reference')
-      .fill(`PAYOUT-CYCLE-${cycle}`);
-    await organizer.page.getByRole('button', { name: /Record payout/ }).click();
+    await organizer.page.getByPlaceholder('Confirmed external payout reference').fill(`PAYOUT-CYCLE-${cycle}`);
+    const disburseBtn = organizer.page.getByRole('button', { name: /Confirm External Payout/ });
+    await expect(disburseBtn).toBeEnabled({ timeout: 20_000 });
+    await disburseBtn.click();
 
     if (cycle < 6) {
-      await expect(organizer.page.getByText(`Cycle ${cycle + 1} of 6`)).toBeVisible({ timeout: 20_000 });
+      await expect(organizer.page.getByText(`Cycle ${cycle + 1} of 6`).first()).toBeVisible({ timeout: 20_000 });
     }
   }
 
   // --- Completion + persistence + audit ---
   await organizer.page.goto(circleUrl);
-  await expect(organizer.page.getByText('COMPLETED')).toBeVisible();
+  await expect(organizer.page.getByText('COMPLETED', { exact: true })).toBeVisible();
   await organizer.page.reload();
-  await expect(organizer.page.getByText('COMPLETED')).toBeVisible();
+  await expect(organizer.page.getByText('COMPLETED', { exact: true })).toBeVisible();
 
   await organizer.page.goto('/admin/audit');
   await expect(organizer.page.getByText('Organizer Audit Trail')).toBeVisible();

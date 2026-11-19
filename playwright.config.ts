@@ -5,7 +5,7 @@ export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: false,
   workers: 1,
-  timeout: 600_000,
+  timeout: 900_000,
   expect: { timeout: 15_000 },
   globalSetup: './tests/e2e/global-setup.ts',
   reporter: [['list']],

@@ -1,3 +1,16 @@
-import type { Metadata } from 'next';import './globals.css';import Link from 'next/link';import { Home,Users,UserRound,ShieldCheck,PlusCircle } from 'lucide-react';
-export const metadata:Metadata={title:'SusuFlow | Save together. Grow together.',description:'Transparent community rotating savings circles',manifest:'/manifest.webmanifest'};
-export default function Layout({children}:{children:React.ReactNode}){return <html lang="en"><body><div className="min-h-screen"><header className="bg-white border-b border-slate-100 sticky top-0 z-20"><div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between"><Link href="/circles" className="text-2xl font-extrabold tracking-tight text-emerald-700 flex items-center gap-2"><ShieldCheck/> Susu<span className="text-slate-900">Flow</span></Link><nav className="hidden sm:flex gap-6 text-sm font-semibold text-slate-500"><Link href="/circles">Dashboard</Link><Link href="/circles/new">Create Circle</Link><Link href="/profile">Profile</Link><Link href="/admin/audit">Audit</Link></nav><Link className="btn text-sm" href="/circles/new"><PlusCircle size={16}/> New Circle</Link></div></header><main className="max-w-6xl mx-auto p-4 sm:p-8 pb-28">{children}</main><nav className="sm:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 flex justify-around py-3 z-30 text-xs font-semibold text-slate-500"><Link href="/circles" className="flex flex-col items-center gap-1"><Home size={20}/>Home</Link><Link href="/circles/new" className="flex flex-col items-center gap-1"><PlusCircle size={20}/>Create</Link><Link href="/profile" className="flex flex-col items-center gap-1"><UserRound size={20}/>Profile</Link></nav></div></body></html>}
+import type { Metadata } from 'next';
+import './globals.css';
+
+export const metadata: Metadata = {
+  title: 'SusuFlow | Save together. Grow together.',
+  description: 'Transparent community rotating savings circles',
+  manifest: '/manifest.webmanifest',
+};
+
+export default function Layout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  );
+}

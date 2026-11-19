@@ -1,1 +1,5 @@
-import { redirect } from 'next/navigation';export default function Home(){redirect('/circles')}
+import CircleWorkspace from '@/components/CircleWorkspace';
+
+export default function Home() {
+  return <CircleWorkspace />;
+}
