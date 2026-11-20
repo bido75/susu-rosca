@@ -1374,13 +1374,32 @@ export default function CircleWorkspace({
                                     <span className={`pill ${c?.status === 'VERIFIED' ? '' : '!bg-amber-50 !text-amber-800'}`}>{m.currentCycleStatus}</span>
                                   </td>
                                   <td className="p-3">
-                                    {organizer && c?.status === 'SUBMITTED' ? (
-                                      <button disabled={busy} className="btn text-xs" onClick={() => act('verify', { contributionId: c.id })}>
-                                        Verify
-                                      </button>
-                                    ) : (
-                                      <span className="text-xs text-slate-500">{m.txRef || '—'}</span>
-                                    )}
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      {organizer && c?.status === 'SUBMITTED' && (
+                                        <button disabled={busy} className="btn text-xs" onClick={() => act('verify', { contributionId: c.id })}>
+                                          Verify
+                                        </button>
+                                      )}
+                                      {organizer && (c?.status === 'SUBMITTED' || c?.status === 'PENDING') && (
+                                        <button
+                                          disabled={busy}
+                                          className="text-xs text-rose-600 font-semibold hover:underline"
+                                          onClick={() => { if (confirm(`Mark ${m.user.fullName} as defaulted? This applies a -10 trust score change.`)) act('default', { contributionId: c.id }); }}
+                                        >
+                                          Default
+                                        </button>
+                                      )}
+                                      {organizer && c?.status === 'PENDING' && (
+                                        <button
+                                          disabled={busy}
+                                          className="text-xs text-emerald-700 font-semibold hover:underline"
+                                          onClick={() => act('remind', { userId: m.userId })}
+                                        >
+                                          Remind
+                                        </button>
+                                      )}
+                                      {!organizer && <span className="text-xs text-slate-500">{m.txRef || '—'}</span>}
+                                    </div>
                                   </td>
                                 </tr>
                               );
