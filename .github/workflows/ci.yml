@@ -31,6 +31,14 @@ jobs:
         env:
           DATABASE_URL: postgresql://susuflow:susuflow@localhost:5432/susuflow?schema=public
           APP_URL: http://localhost:3000
+          # Sentry source-map upload + release/environment tagging.
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: v-and-j-web-design-and-hosting
+          SENTRY_PROJECT: susuflow
+          SENTRY_RELEASE: ${{ github.sha }}
+          SENTRY_ENVIRONMENT: staging
+          NEXT_PUBLIC_SENTRY_RELEASE: ${{ github.sha }}
+          NEXT_PUBLIC_SENTRY_ENVIRONMENT: staging
 
   test:
     name: Unit & integration tests

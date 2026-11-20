@@ -13,9 +13,16 @@ export default withSentryConfig(nextConfig, {
   org: process.env.SENTRY_ORG ?? 'v-and-j-web-design-and-hosting',
   project: process.env.SENTRY_PROJECT ?? 'susuflow',
 
-  // Upload source maps (and pass a token when set) so production stack traces
-  // stay readable. The auth token is secret and lives only in CI, never here.
+  // Upload source maps under a release (set via SENTRY_RELEASE in CI) so
+  // production stack traces stay readable and link to the deploy. The auth
+  // token is secret and lives only in CI, never here.
   authToken: process.env.SENTRY_AUTH_TOKEN,
+
+  // Don't embed the release name into the client bundles (keeps chunk hashes
+  // stable); the SDK reads it at runtime from NEXT_PUBLIC_SENTRY_RELEASE.
+  release: process.env.SENTRY_RELEASE
+    ? { name: process.env.SENTRY_RELEASE, inject: false }
+    : undefined,
 
   // Only print source-map upload logs in CI to keep dev output clean.
   silent: !process.env.CI,
