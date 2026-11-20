@@ -24,5 +24,11 @@ export class ApiError extends Error {
 }
 
 export function cookieOptions(expires: Date) {
-  return { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' as const, path: '/', expires };
+  // Secure by default in production. Set COOKIE_SECURE=false to serve over
+  // plain HTTP (e.g. local Docker at http://127.0.0.1:3210).
+  const secure =
+    process.env.COOKIE_SECURE !== undefined
+      ? process.env.COOKIE_SECURE === 'true'
+      : process.env.NODE_ENV === 'production';
+  return { httpOnly: true, secure, sameSite: 'lax' as const, path: '/', expires };
 }
