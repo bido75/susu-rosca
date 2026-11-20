@@ -67,66 +67,70 @@ enum SwapStatus {
 }
 
 model User {
-  id                     String                  @id @default(uuid()) @db.Uuid
-  email                  String                  @unique
-  fullName               String
-  phoneNumber            String?                 @unique
-  kycStatus              KycStatus               @default(UNVERIFIED)
-  susuTrustScore         Int                     @default(100)
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  sessions               Session[]
-  links                  MagicLink[]
-  circlesCreated         Circle[]                @relation("Organizer")
-  memberships            CircleMember[]
-  contributions          Contribution[]          @relation("ContributionOwner")
-  verifiedContributions  Contribution[]          @relation("Verifier")
-  auditLogs              AuditLog[]
-  requestedSwaps         SlotSwap[]              @relation("SwapRequester")
-  targetSwaps            SlotSwap[]              @relation("SwapTarget")
+  id                    String         @id @default(uuid()) @db.Uuid
+  email                 String         @unique
+  fullName              String
+  phoneNumber           String?        @unique
+  kycStatus             KycStatus      @default(UNVERIFIED)
+  susuTrustScore        Int            @default(100)
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  sessions              Session[]
+  links                 MagicLink[]
+  circlesCreated        Circle[]       @relation("Organizer")
+  memberships           CircleMember[]
+  contributions         Contribution[] @relation("ContributionOwner")
+  verifiedContributions Contribution[] @relation("Verifier")
+  auditLogs             AuditLog[]
+  requestedSwaps        SlotSwap[]     @relation("SwapRequester")
+  targetSwaps           SlotSwap[]     @relation("SwapTarget")
+  scoreChanges          ScoreChange[]
+  disbursementsReceived Disbursement[] @relation("DisbursementRecipient")
+  disbursementsRecorded Disbursement[] @relation("DisbursementRecorder")
 }
 
 model MagicLink {
-  id         String    @id @default(uuid()) @db.Uuid
-  userId     String    @db.Uuid
-  tokenHash  String    @unique
-  codeHash   String?
-  attempts   Int       @default(0)
-  expiresAt  DateTime
-  usedAt     DateTime?
-  createdAt  DateTime  @default(now())
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  codeHash  String?
+  attempts  Int       @default(0)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Session {
-  id         String    @id @default(uuid()) @db.Uuid
-  userId     String    @db.Uuid
-  tokenHash  String    @unique
-  expiresAt  DateTime
-  createdAt  DateTime  @default(now())
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Circle {
-  id                 String        @id @default(uuid()) @db.Uuid
+  id                 String         @id @default(uuid()) @db.Uuid
   name               String
-  contributionAmount Decimal       @db.Decimal(12, 2)
-  currencySymbol     String        @default("$")
+  contributionAmount Decimal        @db.Decimal(12, 2)
+  currencySymbol     String         @default("$")
   frequency          Frequency
   totalCycles        Int
-  currentCycle       Int           @default(1)
-  status             CircleStatus  @default(FORMING)
-  mode               CircleMode    @default(LEDGER)
-  fairValueSlots     Boolean       @default(true)
-  inviteCode         String        @unique
+  currentCycle       Int            @default(1)
+  status             CircleStatus   @default(FORMING)
+  mode               CircleMode     @default(LEDGER)
+  fairValueSlots     Boolean        @default(true)
+  inviteCode         String         @unique
   startDate          DateTime
-  createdBy          String        @db.Uuid
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
-  organizer          User          @relation("Organizer", fields: [createdBy], references: [id])
+  createdBy          String         @db.Uuid
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  organizer          User           @relation("Organizer", fields: [createdBy], references: [id])
   members            CircleMember[]
   cycles             Cycle[]
   swaps              SlotSwap[]
+  disbursements      Disbursement[]
 }
 
 model CircleMember {
@@ -144,16 +148,17 @@ model CircleMember {
 }
 
 model Cycle {
-  id               String         @id @default(uuid()) @db.Uuid
-  circleId         String         @db.Uuid
-  cycleNumber      Int
-  recipientUserId  String?        @db.Uuid
-  status           CycleStatus    @default(PENDING)
-  dueDate          DateTime
-  disbursedAt      DateTime?
-  disbursementRef  String?
-  circle           Circle         @relation(fields: [circleId], references: [id], onDelete: Cascade)
-  contributions    Contribution[]
+  id              String         @id @default(uuid()) @db.Uuid
+  circleId        String         @db.Uuid
+  cycleNumber     Int
+  recipientUserId String?        @db.Uuid
+  status          CycleStatus    @default(PENDING)
+  dueDate         DateTime
+  disbursedAt     DateTime?
+  disbursementRef String?
+  circle          Circle         @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  contributions   Contribution[]
+  disbursements   Disbursement[]
 
   @@unique([circleId, cycleNumber])
 }
@@ -178,28 +183,63 @@ model Contribution {
 }
 
 model SlotSwap {
-  id           String     @id @default(uuid()) @db.Uuid
-  circleId     String     @db.Uuid
-  requesterId  String     @db.Uuid
-  targetId     String     @db.Uuid
-  status       SwapStatus @default(PENDING)
-  createdAt    DateTime   @default(now())
-  resolvedAt   DateTime?
-  circle       Circle     @relation(fields: [circleId], references: [id], onDelete: Cascade)
-  requester    User       @relation("SwapRequester", fields: [requesterId], references: [id])
-  target       User       @relation("SwapTarget", fields: [targetId], references: [id])
+  id          String     @id @default(uuid()) @db.Uuid
+  circleId    String     @db.Uuid
+  requesterId String     @db.Uuid
+  targetId    String     @db.Uuid
+  status      SwapStatus @default(PENDING)
+  createdAt   DateTime   @default(now())
+  resolvedAt  DateTime?
+  circle      Circle     @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  requester   User       @relation("SwapRequester", fields: [requesterId], references: [id])
+  target      User       @relation("SwapTarget", fields: [targetId], references: [id])
 }
 
 model AuditLog {
-  id            String    @id @default(uuid()) @db.Uuid
-  actorId       String    @db.Uuid
-  circleId      String?   @db.Uuid
-  action        String
-  targetEntity  String
-  entityId      String
-  metadata      Json      @default("{}")
-  createdAt     DateTime  @default(now())
-  actor         User      @relation(fields: [actorId], references: [id])
+  id           String   @id @default(uuid()) @db.Uuid
+  actorId      String   @db.Uuid
+  circleId     String?  @db.Uuid
+  action       String
+  targetEntity String
+  entityId     String
+  metadata     Json     @default("{}")
+  createdAt    DateTime @default(now())
+  actor        User     @relation(fields: [actorId], references: [id])
 
   @@index([circleId, createdAt])
+}
+
+model Disbursement {
+  id                String   @id @default(uuid()) @db.Uuid
+  circleId          String   @db.Uuid
+  cycleId           String   @db.Uuid
+  recipientUserId   String   @db.Uuid
+  amount            Decimal  @db.Decimal(12, 2)
+  paymentProvider   String?
+  externalReference String?
+  recordedByUserId  String   @db.Uuid
+  createdAt         DateTime @default(now())
+  circle            Circle   @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  cycle             Cycle    @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  recipient         User     @relation("DisbursementRecipient", fields: [recipientUserId], references: [id])
+  recordedBy        User     @relation("DisbursementRecorder", fields: [recordedByUserId], references: [id])
+
+  @@unique([cycleId])
+  @@index([circleId, createdAt])
+}
+
+model ScoreChange {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid
+  delta         Int
+  previousScore Int
+  newScore      Int
+  reason        String
+  sourceEntity  String
+  sourceId      String?
+  policyVersion Int      @default(1)
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }

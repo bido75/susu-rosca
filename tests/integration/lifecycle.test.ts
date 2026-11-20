@@ -335,6 +335,17 @@ describe('SusuFlow six-member monthly lifecycle', () => {
     });
     expect(cycle2.status).toBe('ACTIVE');
     expect(await db.contribution.count({ where: { cycleId: cycle2.id } })).toBe(6);
+
+    // Auditable disbursement record created for cycle 1.
+    const disp = await db.disbursement.findUniqueOrThrow({ where: { cycleId: cycle1.id } });
+    expect(disp.recipientUserId).toBe(cycle1.recipientUserId);
+    expect(Number(disp.amount)).toBe(3000);
+    expect(disp.externalReference).toBe('PAYOUT-CYCLE-1');
+
+    // Four of six members were verified by the due date in cycle 1 (the test
+    // submits the last two contributions late relative to the chosen start).
+    const scoreChanges = await db.scoreChange.findMany({ where: { sourceId: { in: (await db.contribution.findMany({ where: { cycleId: cycle1.id } })).map((c) => c.id) } } });
+    expect(scoreChanges.length).toBeGreaterThan(0);
   });
 
   it('advances through cycles 2..6 and completes the circle', async () => {
@@ -386,6 +397,12 @@ describe('SusuFlow six-member monthly lifecycle', () => {
     const everyone = [organizer.id, ...members.map((m) => m.id)];
     expect(new Set(recipients).size).toBe(6);
     expect(recipients.sort()).toEqual(everyone.sort());
+
+    // exactly one disbursement record per cycle (6 total)
+    const disbursements = await db.disbursement.findMany({ where: { circleId }, orderBy: { createdAt: 'asc' } });
+    expect(disbursements).toHaveLength(6);
+    expect(new Set(disbursements.map((d) => d.cycleId)).size).toBe(6);
+    expect(disbursements.every((d) => Number(d.amount) === 3000)).toBe(true);
   });
 
   it('rejects a duplicate payout (cycle already advanced)', async () => {
@@ -409,6 +426,15 @@ describe('SusuFlow six-member monthly lifecycle', () => {
     const everyone = await db.user.findMany({ where: { id: { in: [organizer.id, ...members.map((m) => m.id)] } } });
     for (const u of everyone) {
       expect(u.susuTrustScore).toBe(106); // 100 + six on-time contributions
+    }
+  });
+
+  it('records immutable trust-score history for every applied delta', async () => {
+    const changes = await db.scoreChange.findMany({ where: { userId: { in: [organizer.id, ...members.map((m) => m.id)] } } });
+    expect(changes.length).toBeGreaterThan(0);
+    for (const c of changes) {
+      expect(c.newScore - c.previousScore).toBe(c.delta);
+      expect(c.policyVersion).toBe(1);
     }
   });
 

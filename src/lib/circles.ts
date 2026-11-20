@@ -1,8 +1,40 @@
 import { db } from './db';
 import { ApiError } from './auth';
 import { Prisma, type Circle } from '@prisma/client';
+import { applyTrustDelta, TRUST_POLICY_VERSION } from './trust';
 
 export { dueDate } from './dates';
+
+/**
+ * Apply a trust-score delta and append an immutable ScoreChange history row,
+ * recording the previous/new values and the source event that caused it.
+ * Must run inside the same transaction that produced the source event.
+ */
+export async function applyScoreChange(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  delta: number,
+  reason: string,
+  sourceEntity: string,
+  sourceId: string | null,
+) {
+  const user = await tx.user.findUniqueOrThrow({ where: { id: userId } });
+  const previousScore = user.susuTrustScore;
+  const newScore = applyTrustDelta(previousScore, delta);
+  await tx.user.update({ where: { id: userId }, data: { susuTrustScore: newScore } });
+  await tx.scoreChange.create({
+    data: {
+      userId,
+      delta,
+      previousScore,
+      newScore,
+      reason,
+      sourceEntity,
+      sourceId,
+      policyVersion: TRUST_POLICY_VERSION,
+    },
+  });
+}
 
 export async function memberAccess(circleId: string, userId: string) {
   const circle = await db.circle.findUnique({

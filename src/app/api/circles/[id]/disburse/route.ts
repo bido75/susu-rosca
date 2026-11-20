@@ -1,11 +1,12 @@
 import { db } from '@/lib/db';
 import { requireUser, ApiError } from '@/lib/auth';
 import { failure, success } from '@/lib/http';
-import { organizerOnly, lockCircle, audit } from '@/lib/circles';
+import { organizerOnly, lockCircle, audit, applyScoreChange } from '@/lib/circles';
 import { payoutRefSchema } from '@/lib/schemas';
-import { contributionTrustDelta } from '@/lib/trust';
+import { contributionTrustDelta, contributionTrustReason } from '@/lib/trust';
 
 // Records a confirmed OFF-PLATFORM disbursement; never claims to transfer funds.
+// Creates an auditable Disbursement row and appends immutable ScoreChange history.
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   try {
     const user = await requireUser();
@@ -30,26 +31,53 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       ) {
         throw new ApiError(409, 'All member contributions must be verified first');
       }
+
+      const amount = circle.contributionAmount.mul(circle.totalCycles);
+
+      // Mark the cycle disbursed.
       await tx.cycle.update({
         where: { id: cycle.id },
         data: { status: 'DISBURSED', disbursedAt: new Date(), disbursementRef: externalTxRef },
       });
+
+      // Auditable payout record (unique per cycle ⇒ single payout).
+      await tx.disbursement.create({
+        data: {
+          circleId: params.id,
+          cycleId: cycle.id,
+          recipientUserId: cycle.recipientUserId,
+          amount,
+          paymentProvider: circle.mode === 'AUTOMATED_SIMULATED' ? 'SIMULATED' : 'EXTERNAL',
+          externalReference: externalTxRef,
+          recordedByUserId: user.id,
+        },
+      });
+
       await audit(tx, user.id, params.id, 'POT_DISBURSEMENT_RECORDED', cycle.id, {
         recipientId: cycle.recipientUserId,
-        amount: circle.contributionAmount.mul(circle.totalCycles).toFixed(2),
+        amount: amount.toFixed(2),
         externalTxRef,
       });
+
+      // Trust score updates, each with an immutable history row referencing the
+      // source contribution. Duplicate disbursement is prevented by the unique
+      // cycle constraint, so these deltas are applied exactly once.
       for (const m of circle.members) {
         const c = cycle.contributions.find((x) => x.userId === m.userId);
         if (!c?.verifiedAt) continue;
         const delta = contributionTrustDelta(c.verifiedAt, cycle.dueDate);
         if (delta !== 0) {
-          await tx.user.update({
-            where: { id: m.userId },
-            data: { susuTrustScore: { increment: delta } },
-          });
+          await applyScoreChange(
+            tx,
+            m.userId,
+            delta,
+            contributionTrustReason(delta),
+            'Contribution',
+            c.id,
+          );
         }
       }
+
       if (circle.currentCycle === circle.totalCycles) {
         await tx.circle.update({ where: { id: params.id }, data: { status: 'COMPLETED' } });
         return { completed: true };

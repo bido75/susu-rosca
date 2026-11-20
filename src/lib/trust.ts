@@ -32,3 +32,14 @@ export function contributionTrustDelta(verifiedAt: Date | null, dueDate: Date): 
     ? TRUST_DELTAS.ON_TIME_CONTRIBUTION
     : TRUST_DELTAS.LATE_CONTRIBUTION;
 }
+
+/**
+ * Why a given delta is applied, for display in the score history.
+ */
+export function contributionTrustReason(delta: number): string {
+  if (delta === TRUST_DELTAS.ON_TIME_CONTRIBUTION) return 'On-time contribution verified';
+  if (delta === TRUST_DELTAS.LATE_CONTRIBUTION) return 'Late contribution verified';
+  if (delta === TRUST_DELTAS.CYCLE_COMPLETED) return 'Cycle completed';
+  if (delta === TRUST_DELTAS.DEFAULTED) return 'Contribution defaulted';
+  return 'Score adjustment';
+}
