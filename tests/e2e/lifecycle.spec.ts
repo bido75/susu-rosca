@@ -107,6 +107,8 @@ test('six-member monthly Susu lifecycle through the UI', async ({ browser }) => 
 
     if (cycle < 6) {
       await expect(organizer.page.getByText(`Cycle ${cycle + 1} of 6`).first()).toBeVisible({ timeout: 20_000 });
+    } else {
+      await expect(organizer.page.getByText('COMPLETED', { exact: true })).toBeVisible({ timeout: 20_000 });
     }
   }
 

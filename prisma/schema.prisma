@@ -90,6 +90,8 @@ model MagicLink {
   id         String    @id @default(uuid()) @db.Uuid
   userId     String    @db.Uuid
   tokenHash  String    @unique
+  codeHash   String?
+  attempts   Int       @default(0)
   expiresAt  DateTime
   usedAt     DateTime?
   createdAt  DateTime  @default(now())

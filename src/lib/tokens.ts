@@ -1,0 +1,8 @@
+import { createHash, randomBytes, randomInt } from 'node:crypto';
+
+export const hashToken = (token: string) => createHash('sha256').update(token).digest('hex');
+
+export const newToken = () => randomBytes(32).toString('hex');
+
+/** Cryptographically random 6-digit sign-in code, zero-padded. */
+export const newCode = () => randomInt(0, 1_000_000).toString().padStart(6, '0');

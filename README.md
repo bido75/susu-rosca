@@ -19,6 +19,7 @@ Mobile-first Next.js 14 / TypeScript / Tailwind web app with PostgreSQL, Prisma,
 
 - Persistent PostgreSQL data and Prisma migration with constraints.
 - Single-use, short-lived hashed magic-link tokens and hashed seven-day HTTP-only session cookies.
+- A cryptographically random 6-digit sign-in code (also single-use, hashed, brute-force limited) in addition to the email link.
 - Organizer-only slot draws, contribution verification, and payout confirmation.
 - Transaction-scoped PostgreSQL advisory locks serialize sensitive updates per circle, unique member/slot/contribution constraints, and append-only audit trigger.
 - One payout per cycle; advancement after every member's contribution is verified.
@@ -63,7 +64,7 @@ A real browser drives the full six-member lifecycle through the UI: magic-link r
 
 ## API endpoints
 
-`POST /api/auth/request-link`, `GET /api/auth/verify?token=...`, `POST /api/auth/logout`
+`POST /api/auth/request-link`, `GET /api/auth/verify?token=...`, `POST /api/auth/verify-code`, `POST /api/auth/logout`
 
 `GET|POST /api/circles`, `GET /api/circles/:id`, `POST /api/circles/:id/join`, `POST /api/circles/:id/draw`, `POST /api/circles/:id/swaps`, `POST /api/circles/:id/swaps/:swapId/accept`, `POST /api/circles/:id/contributions`, `POST /api/circles/:id/verify`, `POST /api/circles/:id/simulate`, `POST /api/circles/:id/disburse`, `GET /api/circles/:id/events`.
 
