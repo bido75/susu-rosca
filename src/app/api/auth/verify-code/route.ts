@@ -2,11 +2,13 @@ import { z } from 'zod';
 import { db } from '@/lib/db';
 import { hashToken, newToken, cookieOptions, ApiError } from '@/lib/auth';
 import { failure, success } from '@/lib/http';
+import { rateLimit, clientKey } from '@/lib/rate-limit';
 
 const MAX_ATTEMPTS = 5;
 
 export async function POST(req: Request) {
   try {
+    rateLimit(clientKey(req, 'auth:verify-code'), 20);
     const { email, code } = z
       .object({ email: z.string().email().max(255), code: z.string().regex(/^\d{6}$/) })
       .parse(await req.json());

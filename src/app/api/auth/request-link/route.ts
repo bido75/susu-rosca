@@ -3,9 +3,11 @@ import nodemailer from 'nodemailer';
 import { db } from '@/lib/db';
 import { newToken, newCode, hashToken, ApiError } from '@/lib/auth';
 import { failure, success } from '@/lib/http';
+import { rateLimit, clientKey } from '@/lib/rate-limit';
 
 export async function POST(req: Request) {
   try {
+    rateLimit(clientKey(req, 'auth:request-link'), 30);
     const { email, fullName } = z
       .object({ email: z.string().email().max(255), fullName: z.string().min(2).max(100).optional() })
       .parse(await req.json());
