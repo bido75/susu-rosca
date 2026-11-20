@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import nodemailer from 'nodemailer';
 import { db } from '@/lib/db';
 import { newToken, newCode, hashToken, ApiError } from '@/lib/auth';
 import { failure, success } from '@/lib/http';
@@ -9,7 +8,7 @@ export async function POST(req: Request) {
   try {
     rateLimit(clientKey(req, 'auth:request-link'), 30);
     const { email, fullName } = z
-      .object({ email: z.string().email().max(255), fullName: z.string().min(2).max(100).optional() })
+      .object({ email: z.email().max(255), fullName: z.string().min(2).max(100).optional() })
       .parse(await req.json());
     const normalized = email.trim().toLowerCase();
 
@@ -43,6 +42,9 @@ export async function POST(req: Request) {
     const body = `Your secure sign-in link (expires in 15 minutes): ${link}\n\nYour one-time sign-in code (expires in 15 minutes): ${code}`;
 
     if (process.env.SMTP_HOST) {
+      // nodemailer v7+ is ESM-only; load it dynamically so this route works
+      // regardless of the bundle format.
+      const { default: nodemailer } = await import('nodemailer');
       const transport = nodemailer.createTransport({
         host: process.env.SMTP_HOST,
         port: Number(process.env.SMTP_PORT || 587),

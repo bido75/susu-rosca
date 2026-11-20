@@ -7,7 +7,7 @@ export const circleCreateSchema = z.object({
   totalCycles: z.number().int().min(2).max(30),
   mode: z.enum(['LEDGER', 'AUTOMATED_SIMULATED']),
   fairValueSlots: z.boolean().optional(),
-  startDate: z.string().date(),
+  startDate: z.iso.date(),
 });
 
 export const contributionSchema = z.object({
@@ -20,11 +20,11 @@ export const payoutRefSchema = z.object({
 });
 
 export const verifySchema = z.object({
-  contributionId: z.string().uuid(),
+  contributionId: z.uuid(),
 });
 
 export const swapRequestSchema = z.object({
-  targetUserId: z.string().uuid(),
+  targetUserId: z.uuid(),
 });
 
 export const joinSchema = z.object({

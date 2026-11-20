@@ -10,7 +10,7 @@ export async function POST(req: Request) {
   try {
     rateLimit(clientKey(req, 'auth:verify-code'), 20);
     const { email, code } = z
-      .object({ email: z.string().email().max(255), code: z.string().regex(/^\d{6}$/) })
+      .object({ email: z.email().max(255), code: z.string().regex(/^\d{6}$/) })
       .parse(await req.json());
     const normalized = email.trim().toLowerCase();
     const raw = newToken();
