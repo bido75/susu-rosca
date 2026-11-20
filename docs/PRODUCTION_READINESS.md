@@ -12,17 +12,12 @@
 
 ## Not yet production-ready (explicit gaps)
 
-### 1. Dependency advisories (blocking)
-`npm audit --omit=dev` currently reports 4 advisories requiring **breaking major upgrades**:
+### 1. Dependency advisories — RESOLVED
+`npm audit --omit=dev` now reports **0 vulnerabilities**. Completed in two migrations:
 
-| Package | Current | Fix | Breaking |
-|---|---|---|---|
-| nodemailer | 6.10.1 | 10.6.1 | ESM-only since v7 |
-| zod | 3.25.76 | 4.6.7 | API/error-message changes |
-| postcss (via next) | ≤8.5.22 | via next 16 | Next.js 16 migration |
-| next (implied) | 14.2.35 | 16.x | App Router migration |
-
-These are a deliberate migration track, not a blind `npm audit fix --force`. The nodemailer criticals are mitigated in practice because the only address we send to is a Zod-validated email (no `>`/`;`/whitespace injection), and the DoS vectors require a malicious SMTP server. Track and schedule the upgrades before external deployment.
+1. `zod` 3 → 4 (deprecated `z.string().email()` → `z.email()`, `z.string().date()` → `z.iso.date()`, `z.string().uuid()` → `z.uuid()`).
+2. `nodemailer` 6 → 10 (ESM-only, so loaded via a dynamic `import()`, fully patched).
+3. `next` 14 → 16 (+ React 19) to fix the bundled `postcss` advisory and the critical Next.js unauthenticated-RCE-on-Windows advisories (`GHSA-p293-qw3h-jr36`). Migrated `middleware` → `proxy`, async `cookies()`/`params`, and added `allowedDevOrigins` for Docker/Playwright dev.
 
 ### 2. Compliance / fintech (blocking for real money movement)
 SusuFlow records organizer-attested off-platform transfers; the platform never moves money. Before any real payment integration or public launch: KYC/AML, sanctions screening, state money-transmitter licensing, consumer disclosures, and payments-provider contracts. No bank credentials are collected.
