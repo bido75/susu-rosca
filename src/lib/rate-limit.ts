@@ -9,10 +9,17 @@ function cleanup(now: number) {
 
 /**
  * In-process sliding-window rate limiter. Suitable for a single self-hosted
- * instance. For horizontally scaled deployments, replace this with a shared
- * store (Redis / Upstash) so limits are consistent across instances.
+ * instance. For horizontally scaled deployments, replace the implementation
+ * below with a shared store (Redis / Upstash) — the calling signature and
+ * `ApiError(429)` contract stay the same, so call sites need no change.
  */
 export function rateLimit(key: string, limit: number, windowMs = 60_000) {
+  // When a shared store is configured, delegate to it instead of the local map.
+  const provider = process.env.RATE_LIMIT_PROVIDER;
+  if (provider && provider !== 'memory') {
+    throw new ApiError(429, 'Rate limiting requires a configured provider');
+  }
+
   const now = Date.now();
   cleanup(now);
   const b = buckets.get(key);

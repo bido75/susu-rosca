@@ -490,7 +490,7 @@ export default function CircleWorkspace({
               <p className="font-semibold">{toast.title}</p>
               <p className="text-xs opacity-90 mt-0.5 leading-relaxed">{toast.message}</p>
             </div>
-            <button onClick={() => setToast(null)} className="text-white/60 hover:text-white p-1">
+            <button onClick={() => setToast(null)} aria-label="Dismiss notification" className="text-white/60 hover:text-white p-1">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -574,6 +574,7 @@ export default function CircleWorkspace({
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
+                  aria-current={active ? 'page' : undefined}
                   className={`flex items-center justify-between gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition cursor-pointer ${
                     active ? 'bg-slate-800 text-emerald-400 shadow-inner' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
                   }`}
