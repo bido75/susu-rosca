@@ -1,3 +1,4 @@
+import { notifyCircle } from '@/lib/realtime';
 import { randomBytes } from 'node:crypto';import { db } from '@/lib/db';import { requireUser,ApiError } from '@/lib/auth';import { failure,success } from '@/lib/http';import { lockCircle,audit } from '@/lib/circles';
 // Simulation only: no real ACH debit, bank access or money movement.
 export async function POST(_:Request,ctx:{params:Promise<{id:string}>}){try{const params=await ctx.params;const user=await requireUser();const result=await db.$transaction(async tx=>{
@@ -9,5 +10,6 @@ export async function POST(_:Request,ctx:{params:Promise<{id:string}>}){try{cons
  if(!contribution||contribution.status!=='PENDING')throw new ApiError(409,'Contribution not pending');
  const ref='SIM-ACH-'+randomBytes(8).toString('hex');const updated=await tx.contribution.update({where:{id:contribution.id},data:{status:'SUBMITTED',paymentMethod:'ACH',externalTxRef:ref}});
  await audit(tx,user.id,params.id,'ACH_SIMULATED',updated.id,{ref,simulation:true});return {contribution:updated};
- });return success(result);
+ });  void notifyCircle(params.id);
+  return success(result);
 }catch(e){return failure(e)}}

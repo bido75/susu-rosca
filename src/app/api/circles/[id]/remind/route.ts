@@ -1,3 +1,4 @@
+import { notifyCircle } from '@/lib/realtime';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireUser, ApiError } from '@/lib/auth';
@@ -45,7 +46,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       await audit(tx, user.id, params.id, 'REMINDER_SENT', userId, { cycle: circle.currentCycle, memberId: userId });
       return { reminded: true };
     });
-    return success(result);
+      void notifyCircle(params.id);
+  return success(result);
   } catch (e) {
     return failure(e);
   }

@@ -1,3 +1,4 @@
+import { notifyCircle } from '@/lib/realtime';
 import { db } from '@/lib/db';
 import { requireUser, ApiError } from '@/lib/auth';
 import { failure, success } from '@/lib/http';
@@ -51,6 +52,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       return evidence;
     });
 
+      void notifyCircle(params.id);
     return success({ evidence: result }, 201);
   } catch (e) {
     // Roll back the orphaned file if the DB write failed.

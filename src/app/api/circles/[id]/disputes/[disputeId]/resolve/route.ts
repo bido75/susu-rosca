@@ -1,3 +1,4 @@
+import { notifyCircle } from '@/lib/realtime';
 import { z } from 'zod';
 import { db } from '@/lib/db';
 import { requireUser, ApiError } from '@/lib/auth';
@@ -25,6 +26,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string; di
       await audit(tx, user.id, params.id, 'DISPUTE_RESOLVED', dispute.id, { cycle: circle.currentCycle });
       return updated;
     });
+      void notifyCircle(params.id);
     return success({ dispute: result });
   } catch (e) {
     return failure(e);

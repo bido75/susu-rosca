@@ -1,3 +1,4 @@
+import { notifyCircle } from '@/lib/realtime';
 import { db } from '@/lib/db';
 import { requireUser, ApiError } from '@/lib/auth';
 import { failure, success } from '@/lib/http';
@@ -100,7 +101,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       }
       return { completed: false, currentCycle: nextNumber };
     });
-    return success(result);
+      void notifyCircle(params.id);
+  return success(result);
   } catch (e) {
     return failure(e);
   }

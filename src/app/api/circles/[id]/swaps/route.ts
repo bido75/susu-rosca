@@ -1,3 +1,4 @@
+import { notifyCircle } from '@/lib/realtime';
 import { z } from 'zod';import { db } from '@/lib/db';import { requireUser,ApiError } from '@/lib/auth';import { failure,success } from '@/lib/http';import { lockCircle,audit } from '@/lib/circles';
 export async function POST(req:Request,ctx:{params:Promise<{id:string}>}){try{const params=await ctx.params;const user=await requireUser();const {targetUserId}=z.object({targetUserId:z.uuid()}).parse(await req.json());const swap=await db.$transaction(async tx=>{
  await lockCircle(tx,params.id);const circle=await tx.circle.findUnique({where:{id:params.id},include:{members:true}});if(!circle||circle.status!=='ACTIVE')throw new ApiError(409,'Circle not active');
@@ -8,5 +9,6 @@ export async function POST(req:Request,ctx:{params:Promise<{id:string}>}){try{co
  if(existing)throw new ApiError(409,'One of the members has a pending request');
  const s=await tx.slotSwap.create({data:{circleId:params.id,requesterId:user.id,targetId:targetUserId}});
  await audit(tx,user.id,params.id,'SWAP_REQUESTED',s.id,{targetUserId});return s;
- });return success({swap},201);
+ });void notifyCircle(params.id);
+return success({swap},201);
 }catch(e){return failure(e)}}

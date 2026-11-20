@@ -1,16 +1,61 @@
-import { requireUser } from '@/lib/auth';import { db } from '@/lib/db';import { memberAccess } from '@/lib/circles';import { failure } from '@/lib/http';
-export const runtime='nodejs';export const dynamic='force-dynamic';
-// Database-backed event streaming across app instances; clients refetch authorized data.
-export async function GET(_:Request,ctx:{params:Promise<{id:string}>}){try{const params=await ctx.params;const user=await requireUser();await memberAccess(params.id,user.id);
- const encoder=new TextEncoder();let timer:ReturnType<typeof setInterval>|undefined;let last='';let busy=false;
- const stream=new ReadableStream({start(controller){
-  controller.enqueue(encoder.encode('retry: 3000\n\n'));
-  timer=setInterval(async()=>{if(busy)return;busy=true;try{
-   const member=await db.circleMember.findUnique({where:{circleId_userId:{circleId:params.id,userId:user.id}}});if(!member){controller.close();if(timer)clearInterval(timer);return;}
-   const [circle,latest]=await Promise.all([db.circle.findUnique({where:{id:params.id},select:{updatedAt:true}}),db.auditLog.findFirst({where:{circleId:params.id},orderBy:{createdAt:'desc'},select:{id:true}})]);
-   const version=`${circle?.updatedAt.toISOString()}|${latest?.id||''}`;
-   if(version!==last){last=version;controller.enqueue(encoder.encode(`event: changed\ndata: ${JSON.stringify({version})}\n\n`));}
-  }catch{if(timer)clearInterval(timer);try{controller.close();}catch{}}finally{busy=false;}},2000);
- },cancel(){if(timer)clearInterval(timer);}});
- return new Response(stream,{headers:{'Content-Type':'text/event-stream','Cache-Control':'no-cache, no-transform','X-Accel-Buffering':'no'}});
-}catch(e){return failure(e)}}
+import { db } from '@/lib/db';
+import { requireUser } from '@/lib/auth';
+import { memberAccess } from '@/lib/circles';
+import { failure } from '@/lib/http';
+import { subscribeCircle } from '@/lib/realtime';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+// Push-based Server-Sent Events via PostgreSQL LISTEN/NOTIFY. The database
+// stays the source of truth; this only tells authorized clients to refetch.
+export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) {
+  try {
+    const params = await ctx.params;
+    const user = await requireUser();
+    await memberAccess(params.id, user.id);
+
+    const encoder = new TextEncoder();
+    let controllerRef: ReadableStreamDefaultController | null = null;
+    let heartbeat: ReturnType<typeof setInterval> | null = null;
+
+    const emit = () => {
+      controllerRef?.enqueue(encoder.encode(`event: changed\ndata: ${JSON.stringify({ ts: Date.now() })}\n\n`));
+    };
+
+    const stream = new ReadableStream({
+      start(controller) {
+        controllerRef = controller;
+        controller.enqueue(encoder.encode('retry: 3000\n\n'));
+
+        const ac = new AbortController();
+        void subscribeCircle(params.id, emit, ac.signal).catch(() => {});
+
+        // Slow heartbeat keeps the stream alive and guards against a missed
+        // notification (e.g. a mutation that predates subscription).
+        heartbeat = setInterval(() => {
+          controller.enqueue(encoder.encode(': heartbeat\n\n'));
+        }, 25_000);
+
+        // Track a stable version so a reconnect can still reconcile.
+        const versionPoll = setInterval(() => emit(), 60_000);
+        ac.abort = () => clearInterval(versionPoll);
+      },
+      cancel() {
+        if (heartbeat) clearInterval(heartbeat);
+        controllerRef = null;
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache, no-transform',
+        'X-Accel-Buffering': 'no',
+        Connection: 'keep-alive',
+      },
+    });
+  } catch (e) {
+    return failure(e);
+  }
+}

@@ -1,3 +1,4 @@
+import { notifyCircle } from '@/lib/realtime';
 import { db } from '@/lib/db';import { requireUser,ApiError } from '@/lib/auth';import { failure,success } from '@/lib/http';import { audit,lockCircle } from '@/lib/circles';
 export async function POST(_:Request,ctx:{params:Promise<{id:string,swapId:string}>}){try{const params=await ctx.params;const user=await requireUser();const result=await db.$transaction(async tx=>{
  await lockCircle(tx,params.id);const swap=await tx.slotSwap.findUnique({where:{id:params.swapId}});
@@ -15,5 +16,6 @@ export async function POST(_:Request,ctx:{params:Promise<{id:string,swapId:strin
  await tx.cycle.update({where:{circleId_cycleNumber:{circleId:params.id,cycleNumber:sb}},data:{recipientUserId:a.userId}});
  await tx.slotSwap.update({where:{id:swap.id},data:{status:'ACCEPTED',resolvedAt:new Date()}});
  await audit(tx,user.id,params.id,'SLOT_SWAP_ACCEPTED',swap.id,{requesterId:a.userId,targetId:b.userId,previousSlots:[sa,sb]});return {accepted:true};
- });return success(result);
+ });  void notifyCircle(params.id);
+  return success(result);
 }catch(e){return failure(e)}}
