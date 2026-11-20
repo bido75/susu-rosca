@@ -33,6 +33,8 @@ export default function Login() {
       setMessage(d.message);
       setSent(true);
       setCode('');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unable to send the sign-in link.');
     } finally {
       setBusy(false);
     }
@@ -55,6 +57,8 @@ export default function Login() {
       }
       router.push('/circles');
       router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Invalid sign-in code.');
     } finally {
       setBusy(false);
     }

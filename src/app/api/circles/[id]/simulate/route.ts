@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';import { db } from '@/lib/db';import { requireUser,ApiError } from '@/lib/auth';import { failure,success } from '@/lib/http';import { lockCircle,audit } from '@/lib/circles';
 // Simulation only: no real ACH debit, bank access or money movement.
-export async function POST(_:Request,{params}:{params:{id:string}}){try{const user=await requireUser();const result=await db.$transaction(async tx=>{
+export async function POST(_:Request,ctx:{params:Promise<{id:string}>}){try{const params=await ctx.params;const user=await requireUser();const result=await db.$transaction(async tx=>{
  await lockCircle(tx,params.id);const circle=await tx.circle.findUnique({where:{id:params.id}});
  if(!circle||circle.status!=='ACTIVE'||circle.mode!=='AUTOMATED_SIMULATED')throw new ApiError(409,'Simulation unavailable');
  const member=await tx.circleMember.findUnique({where:{circleId_userId:{circleId:params.id,userId:user.id}}});if(!member)throw new ApiError(403,'Not a member');

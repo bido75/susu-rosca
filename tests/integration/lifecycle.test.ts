@@ -69,7 +69,7 @@ async function post(fn: Handler, opts: { params?: Record<string, string>; body?:
     headers: opts.body !== undefined ? { 'Content-Type': 'application/json' } : {},
     body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
   });
-  const res = await fn(req, { params: opts.params ?? {} });
+  const res = await fn(req, { params: Promise.resolve(opts.params ?? {}) });
   return { status: res.status, json: (await res.json()) as Json };
 }
 
@@ -174,7 +174,7 @@ describe('SusuFlow six-member monthly lifecycle', () => {
 
   it('requires authentication to access a circle', async () => {
     logout();
-    const res = await getCircle(new Request('http://localhost/api/x'), { params: { id: circleId } });
+    const res = await getCircle(new Request('http://localhost/api/x'), { params: Promise.resolve({ id: circleId }) });
     expect(res.status).toBe(401);
     loginAs(organizer.id);
   });

@@ -4,8 +4,9 @@ import { failure, success } from '@/lib/http';
 import { organizerOnly, lockCircle, audit } from '@/lib/circles';
 import { cryptoShuffle } from '@/lib/shuffle';
 
-export async function POST(_: Request, { params }: { params: { id: string } }) {
+export async function POST(_: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
+    const params = await ctx.params;
     const user = await requireUser();
     const result = await db.$transaction(async (tx) => {
       await lockCircle(tx, params.id);

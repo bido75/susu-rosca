@@ -21,7 +21,7 @@ function applyHeaders(res: NextResponse) {
   return res;
 }
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
     const origin = req.headers.get('origin');
     const expected = process.env.APP_URL ? new URL(process.env.APP_URL).origin : req.nextUrl.origin;

@@ -7,8 +7,9 @@ import { contributionTrustDelta, contributionTrustReason } from '@/lib/trust';
 
 // Records a confirmed OFF-PLATFORM disbursement; never claims to transfer funds.
 // Creates an auditable Disbursement row and appends immutable ScoreChange history.
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
+    const params = await ctx.params;
     const user = await requireUser();
     const { externalTxRef } = payoutRefSchema.parse(await req.json());
     const result = await db.$transaction(async (tx) => {

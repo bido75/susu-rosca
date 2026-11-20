@@ -1,7 +1,7 @@
 import { requireUser } from '@/lib/auth';import { db } from '@/lib/db';import { memberAccess } from '@/lib/circles';import { failure } from '@/lib/http';
 export const runtime='nodejs';export const dynamic='force-dynamic';
 // Database-backed event streaming across app instances; clients refetch authorized data.
-export async function GET(_:Request,{params}:{params:{id:string}}){try{const user=await requireUser();await memberAccess(params.id,user.id);
+export async function GET(_:Request,ctx:{params:Promise<{id:string}>}){try{const params=await ctx.params;const user=await requireUser();await memberAccess(params.id,user.id);
  const encoder=new TextEncoder();let timer:ReturnType<typeof setInterval>|undefined;let last='';let busy=false;
  const stream=new ReadableStream({start(controller){
   controller.enqueue(encoder.encode('retry: 3000\n\n'));

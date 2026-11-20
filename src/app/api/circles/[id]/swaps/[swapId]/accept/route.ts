@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';import { requireUser,ApiError } from '@/lib/auth';import { failure,success } from '@/lib/http';import { audit,lockCircle } from '@/lib/circles';
-export async function POST(_:Request,{params}:{params:{id:string,swapId:string}}){try{const user=await requireUser();const result=await db.$transaction(async tx=>{
+export async function POST(_:Request,ctx:{params:Promise<{id:string,swapId:string}>}){try{const params=await ctx.params;const user=await requireUser();const result=await db.$transaction(async tx=>{
  await lockCircle(tx,params.id);const swap=await tx.slotSwap.findUnique({where:{id:params.swapId}});
  if(!swap||swap.circleId!==params.id||swap.status!=='PENDING')throw new ApiError(404,'Pending swap not found');
  if(swap.targetId!==user.id)throw new ApiError(403,'Only the invited member can approve');

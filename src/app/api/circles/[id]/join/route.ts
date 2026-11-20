@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';import { requireUser,ApiError } from '@/lib/auth';import { failure,success } from '@/lib/http';import { audit,lockCircle } from '@/lib/circles';
-export async function POST(req:Request,{params}:{params:{id:string}}){try{const user=await requireUser();const {code}=await req.json();const result=await db.$transaction(async tx=>{
+export async function POST(req:Request,ctx:{params:Promise<{id:string}>}){try{const params=await ctx.params;const user=await requireUser();const {code}=await req.json();const result=await db.$transaction(async tx=>{
  await lockCircle(tx,params.id);const circle=await tx.circle.findUnique({where:{id:params.id},include:{_count:{select:{members:true}}}});
  if(!circle||circle.inviteCode!==code)throw new ApiError(404,'Invalid invitation.');
  if(circle.status!=='FORMING')throw new ApiError(409,'Circle is closed for new members.');

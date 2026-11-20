@@ -5,7 +5,8 @@ import { hashToken, newToken, newCode } from './tokens';
 export { hashToken, newToken, newCode };
 
 export async function currentUser() {
-  const token = cookies().get('susuflow_session')?.value;
+  const store = await cookies();
+  const token = store.get('susuflow_session')?.value;
   if (!token) return null;
   const session = await db.session.findUnique({ where: { tokenHash: hashToken(token) }, include: { user: true } });
   return session && session.expiresAt > new Date() ? session.user : null;

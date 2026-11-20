@@ -1,1 +1,1 @@
-import CircleWorkspace from '@/components/CircleWorkspace';export default function Circle({params}:{params:{id:string}}){return <CircleWorkspace id={params.id} section="overview"/>}
+import CircleWorkspace from '@/components/CircleWorkspace';export default async function Circle({params}:{params:Promise<{id:string}>}){const {id}=await params;return <CircleWorkspace id={id} section="overview"/>}

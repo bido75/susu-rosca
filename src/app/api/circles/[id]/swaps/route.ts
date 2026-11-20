@@ -1,5 +1,5 @@
 import { z } from 'zod';import { db } from '@/lib/db';import { requireUser,ApiError } from '@/lib/auth';import { failure,success } from '@/lib/http';import { lockCircle,audit } from '@/lib/circles';
-export async function POST(req:Request,{params}:{params:{id:string}}){try{const user=await requireUser();const {targetUserId}=z.object({targetUserId:z.string().uuid()}).parse(await req.json());const swap=await db.$transaction(async tx=>{
+export async function POST(req:Request,ctx:{params:Promise<{id:string}>}){try{const params=await ctx.params;const user=await requireUser();const {targetUserId}=z.object({targetUserId:z.uuid()}).parse(await req.json());const swap=await db.$transaction(async tx=>{
  await lockCircle(tx,params.id);const circle=await tx.circle.findUnique({where:{id:params.id},include:{members:true}});if(!circle||circle.status!=='ACTIVE')throw new ApiError(409,'Circle not active');
  const a=circle.members.find(m=>m.userId===user.id),b=circle.members.find(m=>m.userId===targetUserId);
  if(!a||!b||!a.slotNumber||!b.slotNumber||a.id===b.id)throw new ApiError(400,'Invalid swap members');

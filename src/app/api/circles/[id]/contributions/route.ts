@@ -4,8 +4,9 @@ import { failure, success } from '@/lib/http';
 import { lockCircle, audit } from '@/lib/circles';
 import { contributionSchema } from '@/lib/schemas';
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
+    const params = await ctx.params;
     const user = await requireUser();
     const input = contributionSchema.parse(await req.json());
     const result = await db.$transaction(async (tx) => {
