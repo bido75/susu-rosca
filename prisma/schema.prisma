@@ -67,26 +67,27 @@ enum SwapStatus {
 }
 
 model User {
-  id                    String         @id @default(uuid()) @db.Uuid
-  email                 String         @unique
+  id                    String                 @id @default(uuid()) @db.Uuid
+  email                 String                 @unique
   fullName              String
-  phoneNumber           String?        @unique
-  kycStatus             KycStatus      @default(UNVERIFIED)
-  susuTrustScore        Int            @default(100)
-  createdAt             DateTime       @default(now())
-  updatedAt             DateTime       @updatedAt
+  phoneNumber           String?                @unique
+  kycStatus             KycStatus              @default(UNVERIFIED)
+  susuTrustScore        Int                    @default(100)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
   sessions              Session[]
   links                 MagicLink[]
-  circlesCreated        Circle[]       @relation("Organizer")
+  circlesCreated        Circle[]               @relation("Organizer")
   memberships           CircleMember[]
-  contributions         Contribution[] @relation("ContributionOwner")
-  verifiedContributions Contribution[] @relation("Verifier")
+  contributions         Contribution[]         @relation("ContributionOwner")
+  verifiedContributions Contribution[]         @relation("Verifier")
   auditLogs             AuditLog[]
-  requestedSwaps        SlotSwap[]     @relation("SwapRequester")
-  targetSwaps           SlotSwap[]     @relation("SwapTarget")
+  requestedSwaps        SlotSwap[]             @relation("SwapRequester")
+  targetSwaps           SlotSwap[]             @relation("SwapTarget")
   scoreChanges          ScoreChange[]
-  disbursementsReceived Disbursement[] @relation("DisbursementRecipient")
-  disbursementsRecorded Disbursement[] @relation("DisbursementRecorder")
+  disbursementsReceived Disbursement[]         @relation("DisbursementRecipient")
+  disbursementsRecorded Disbursement[]         @relation("DisbursementRecorder")
+  uploadedEvidence      ContributionEvidence[] @relation("EvidenceUploader")
 }
 
 model MagicLink {
@@ -164,22 +165,38 @@ model Cycle {
 }
 
 model Contribution {
-  id            String             @id @default(uuid()) @db.Uuid
-  cycleId       String             @db.Uuid
-  userId        String             @db.Uuid
-  amount        Decimal            @db.Decimal(12, 2)
-  status        ContributionStatus @default(PENDING)
+  id            String                 @id @default(uuid()) @db.Uuid
+  cycleId       String                 @db.Uuid
+  userId        String                 @db.Uuid
+  amount        Decimal                @db.Decimal(12, 2)
+  status        ContributionStatus     @default(PENDING)
   paymentMethod PaymentMethod?
   externalTxRef String?
-  verifiedBy    String?            @db.Uuid
+  verifiedBy    String?                @db.Uuid
   verifiedAt    DateTime?
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
-  cycle         Cycle              @relation(fields: [cycleId], references: [id], onDelete: Cascade)
-  user          User               @relation("ContributionOwner", fields: [userId], references: [id])
-  verifier      User?              @relation("Verifier", fields: [verifiedBy], references: [id])
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  cycle         Cycle                  @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  user          User                   @relation("ContributionOwner", fields: [userId], references: [id])
+  verifier      User?                  @relation("Verifier", fields: [verifiedBy], references: [id])
+  evidence      ContributionEvidence[]
 
   @@unique([cycleId, userId])
+}
+
+model ContributionEvidence {
+  id             String       @id @default(uuid()) @db.Uuid
+  contributionId String       @db.Uuid
+  fileName       String
+  mimeType       String
+  sizeBytes      Int
+  storageKey     String       @unique
+  uploadedBy     String       @db.Uuid
+  createdAt      DateTime     @default(now())
+  contribution   Contribution @relation(fields: [contributionId], references: [id], onDelete: Cascade)
+  uploader       User         @relation("EvidenceUploader", fields: [uploadedBy], references: [id])
+
+  @@index([contributionId])
 }
 
 model SlotSwap {

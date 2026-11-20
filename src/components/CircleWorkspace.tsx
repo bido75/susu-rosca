@@ -46,6 +46,7 @@ type Contribution = {
   externalTxRef: string | null;
   verifiedAt: string | null;
   user: { id: string; fullName: string };
+  evidence: { id: string; fileName: string; mimeType: string }[];
 };
 type Cycle = {
   id: string;
@@ -178,6 +179,8 @@ export default function CircleWorkspace({
 
   const [method, setMethod] = useState('ZELLE');
   const [txRef, setTxRef] = useState('');
+  const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [payoutRef, setPayoutRef] = useState('');
   const [target, setTarget] = useState('');
 
@@ -264,6 +267,40 @@ export default function CircleWorkspace({
       return null;
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function submitWithEvidence() {
+    if (!activeId || txRef.trim().length < 3) return;
+    setError('');
+    setBusy(true);
+    setUploading(!!evidenceFile);
+    try {
+      const r = await fetch(`/api/circles/${activeId}/contributions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentMethod: method, externalTxRef: txRef }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || 'Action failed');
+
+      if (evidenceFile) {
+        const fd = new FormData();
+        fd.append('file', evidenceFile);
+        const up = await fetch(`/api/circles/${activeId}/evidence`, { method: 'POST', body: fd });
+        const uj = await up.json();
+        if (!up.ok) throw new Error(uj.error || 'Evidence upload failed');
+      }
+
+      await loadCircle(activeId);
+      setTxRef('');
+      setEvidenceFile(null);
+      triggerToast('Proof submitted', 'Your payment reference was submitted for organizer verification.');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Request failed');
+    } finally {
+      setBusy(false);
+      setUploading(false);
     }
   }
 
@@ -1245,7 +1282,8 @@ export default function CircleWorkspace({
                           <>
                             <h2 className="font-bold text-xl">Submit payment reference</h2>
                             <p className="text-sm text-slate-500 my-3">
-                              Pay your organizer outside SusuFlow first, then submit the confirmation reference.
+                              Pay your organizer outside SusuFlow first, then submit the confirmation reference and
+                              optionally attach a screenshot or receipt.
                             </p>
                             <div className="flex flex-wrap gap-3">
                               <select className="field flex-1" value={method} onChange={(e) => setMethod(e.target.value)}>
@@ -1259,14 +1297,25 @@ export default function CircleWorkspace({
                                 value={txRef}
                                 onChange={(e) => setTxRef(e.target.value)}
                               />
-                              <button
-                                className="btn"
-                                disabled={busy || txRef.trim().length < 3}
-                                onClick={() => act('contributions', { paymentMethod: method, externalTxRef: txRef })}
-                              >
-                                Submit proof
-                              </button>
                             </div>
+                            <div className="mt-3">
+                              <input
+                                type="file"
+                                className="text-sm text-slate-600"
+                                accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"
+                                onChange={(e) => setEvidenceFile(e.target.files?.[0] ?? null)}
+                              />
+                              <p className="text-xs text-slate-500 mt-1">
+                                Optional receipt (image or PDF, max 5 MB). Stored privately; only you and the organizer can view it.
+                              </p>
+                            </div>
+                            <button
+                              className="btn mt-3"
+                              disabled={busy || txRef.trim().length < 3}
+                              onClick={submitWithEvidence}
+                            >
+                              {uploading ? 'Submitting & uploading…' : 'Submit proof'}
+                            </button>
                           </>
                         )}
                       </div>
@@ -1304,6 +1353,21 @@ export default function CircleWorkspace({
                                   <td className="p-3 text-xs">
                                     <div className="font-semibold text-slate-800">{m.paymentMethod}</div>
                                     <div className="text-slate-400 font-mono">{m.txRef || 'Awaiting transfer'}</div>
+                                    {(organizer || m.userId === viewerId) && c?.evidence && c.evidence.length > 0 && (
+                                      <div className="mt-1 flex flex-wrap gap-1">
+                                        {c.evidence.map((e) => (
+                                          <a
+                                            key={e.id}
+                                            href={`/api/circles/${circle.id}/evidence/${e.id}`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-emerald-700 underline text-[11px]"
+                                          >
+                                            📎 {e.fileName}
+                                          </a>
+                                        ))}
+                                      </div>
+                                    )}
                                   </td>
                                   <td className="p-3 font-bold">${contribution.toLocaleString()}</td>
                                   <td className="p-3">

@@ -30,9 +30,12 @@ services:
         condition: service_started
     ports:
       - "127.0.0.1:3210:3000"
+    volumes:
+      - "evidence:/app/data/evidence"
     environment:
       DATABASE_URL: postgresql://susuflow:susuflow@db:5432/susuflow?schema=public
       APP_URL: http://127.0.0.1:3210
+      EVIDENCE_DIR: /app/data/evidence
       SMTP_HOST: mail
       SMTP_PORT: "1025"
       SMTP_USER: susuflow
@@ -42,3 +45,4 @@ services:
 
 volumes:
   pgdata:
+  evidence:
