@@ -53,6 +53,7 @@ export async function memberAccess(circleId: string, userId: string) {
         },
       },
       swaps: { orderBy: { createdAt: 'desc' }, take: 20 },
+      disputes: { orderBy: { createdAt: 'desc' }, take: 20 },
     },
   });
   if (!circle || !circle.members.some((m) => m.userId === userId)) {
@@ -100,4 +101,5 @@ export const fullCircle = {
     },
   },
   swaps: { orderBy: { createdAt: 'desc' as const }, take: 20 },
+  disputes: { orderBy: { createdAt: 'desc' as const }, take: 20 },
 };

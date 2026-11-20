@@ -22,7 +22,8 @@ export default async function Audit() {
 
   const orgCircleIds = (await db.circle.findMany({ where: { createdBy: user.id }, select: { id: true } })).map((c) => c.id);
   const logs = await db.auditLog.findMany({
-    where: { circleId: { in: orgCircleIds } },
+    // Platform admins see every audit record; organizers see their circles.
+    where: user.isAdmin ? {} : { circleId: { in: orgCircleIds } },
     orderBy: { createdAt: 'desc' },
     take: 200,
     include: { actor: { select: { fullName: true } } },
@@ -33,8 +34,12 @@ export default async function Audit() {
       <Link href="/circles" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-emerald-700">
         <ArrowLeft size={16} /> Back to circles
       </Link>
-      <h1 className="text-3xl font-extrabold">Organizer Audit Trail</h1>
-      <p className="text-slate-500">Critical recorded events for circles you organize. Entries are append-only at database level.</p>
+      <h1 className="text-3xl font-extrabold">{user.isAdmin ? 'Platform Audit Trail' : 'Organizer Audit Trail'}</h1>
+      <p className="text-slate-500">
+        {user.isAdmin
+          ? 'All recorded events across every circle. Entries are append-only at database level.'
+          : 'Critical recorded events for circles you organize. Entries are append-only at database level.'}
+      </p>
       <div className="card overflow-x-auto">
         <table className="text-sm w-full">
           <thead>

@@ -1,6 +1,7 @@
 import { currentUser } from '@/lib/auth';
 import Link from 'next/link';
 import { ShieldCheck, ArrowLeft } from 'lucide-react';
+import KycRequest from '@/components/KycRequest';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,12 +22,16 @@ export default async function Profile() {
           <h1 className="text-3xl font-bold">Your Profile</h1>
           <p className="font-bold">{user.fullName}</p>
           <p className="text-slate-500">{user.email}</p>
+          {user.isAdmin && <p className="text-xs font-semibold text-indigo-600">Administrator</p>}
           <div className="rounded-xl bg-emerald-50 p-5">
             <p className="text-sm font-bold text-emerald-700">Susu Trust Score</p>
             <p className="text-4xl font-extrabold">{user.susuTrustScore}</p>
             <p className="text-xs text-slate-600 mt-2">Earn +1 for each timely verified cycle contribution. Community activity metric, not a credit score.</p>
           </div>
-          <p>KYC: {user.kycStatus}</p>
+          <div className="flex items-center justify-between">
+            <span>KYC: {user.kycStatus}</span>
+            <KycRequest status={user.kycStatus} />
+          </div>
           <form action="/api/auth/logout" method="post">
             <button className="btn-secondary">Sign out</button>
           </form>

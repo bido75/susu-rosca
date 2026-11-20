@@ -18,6 +18,12 @@ export async function requireUser() {
   return user;
 }
 
+export async function requireAdmin() {
+  const user = await requireUser();
+  if (!user.isAdmin) throw new ApiError(403, 'Admin only.');
+  return user;
+}
+
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
     super(message);

@@ -32,6 +32,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       ) {
         throw new ApiError(409, 'All member contributions must be verified first');
       }
+      const openDispute = await tx.dispute.findFirst({
+        where: { circleId: params.id, cycleId: cycle.id, status: 'OPEN' },
+      });
+      if (openDispute) throw new ApiError(409, 'Cannot disburse while a dispute is open');
 
       const amount = circle.contributionAmount.mul(circle.totalCycles);
 
