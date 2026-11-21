@@ -11,6 +11,12 @@ Mobile-first Next.js 14 / TypeScript / Tailwind web app with PostgreSQL, Prisma,
 5. `npx prisma generate`
 6. `npx prisma migrate deploy`
 7. `npm run dev` — open `http://localhost:3000`.
+
+### Backups
+
+The `docker-compose.yml` includes a `backups` service that automatically dumps PostgreSQL on a
+schedule (default daily) with retention rotation into the `backups` volume. See
+[docs/BACKUP.md](docs/BACKUP.md) for configuration, restore, and off-machine guidance.
 8. Sign in with an email. In development, without SMTP, the magic link is printed **only in your terminal**, not in the UI. Configure SMTP for actual email.
 9. Create a circle, share its join link with different signed-in members, then draw the order as organizer after reaching capacity.
 10. Each member uses an external payment tool and submits a transaction reference. The organizer verifies only after checking real receipt outside SusuFlow. After all references are verified, record a **completed off-platform payout reference** to advance the circle.
