@@ -7,10 +7,6 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ['127.0.0.1'],
   // Auto-generated AGENTS.md is noise for this repo; keep the tree clean.
   agentRules: false,
-  // Inject the Sentry client SDK before React hydration (Next 16 Turbopack).
-  // Sentry's own Turbopack path does not reliably wire this up, so we set the
-  // native option explicitly.
-  instrumentationClientInject: ['./src/instrumentation-client.ts'],
 };
 
 export default withSentryConfig(nextConfig, {

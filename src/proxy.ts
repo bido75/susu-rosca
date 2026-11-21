@@ -9,7 +9,10 @@ const BASE_HEADERS: Record<string, string> = {
   'Content-Security-Policy':
     "default-src 'self'; script-src 'self' 'unsafe-inline'" +
     (process.env.NODE_ENV === 'production' ? '' : " 'unsafe-eval'") +
-    "; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'",
+    "; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; " +
+    // Sentry ingest + blob workers for Session Replay.
+    "connect-src 'self' https://*.ingest.us.sentry.io; worker-src 'self' blob:; " +
+    "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'",
 };
 
 function applyHeaders(res: NextResponse) {

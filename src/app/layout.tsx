@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import SentryInit from '@/components/SentryInit';
 
 export const metadata: Metadata = {
   title: 'SusuFlow | Save together. Grow together.',
@@ -11,10 +10,7 @@ export const metadata: Metadata = {
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>
-        <SentryInit />
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
