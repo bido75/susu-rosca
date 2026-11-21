@@ -44,9 +44,17 @@ export async function POST(req: Request) {
     const subject = 'Sign in to SusuFlow';
     const text = `Your secure sign-in link (expires in 15 minutes): ${link}\n\nYour one-time sign-in code (expires in 15 minutes): ${code}`;
 
+    // In development (no email provider wiring in tests/local), always echo the
+    // magic link + code as plain text so the E2E harness and local dev can read
+    // them directly from the server console.
+    if (process.env.NODE_ENV === 'development') {
+      console.info(`[DEV ONLY] Magic link for ${normalized}: ${link}`);
+      console.info(`[DEV ONLY] Sign-in code for ${normalized}: ${code}`);
+    }
+
     // Email delivery is best-effort: never fail sign-in because a provider is
     // misconfigured. The link/code are already persisted; log the failure so it
-    // is observable, and (in development) echo the link/code to the log.
+    // is observable.
     try {
       await sendMail({ to: normalized, subject, text });
     } catch (e) {
@@ -54,10 +62,6 @@ export async function POST(req: Request) {
         message: e instanceof Error ? e.message : String(e),
         to: normalized,
       });
-      if (process.env.NODE_ENV === 'development') {
-        logger.info(`[DEV ONLY] Magic link for ${normalized}: ${link}`);
-        logger.info(`[DEV ONLY] Sign-in code for ${normalized}: ${code}`);
-      }
     }
 
     return success({

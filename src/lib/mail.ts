@@ -35,7 +35,9 @@ export async function sendMail(opts: { to: string; subject: string; text: string
   }
 
   if (process.env.NODE_ENV === 'development') {
-    logger.info(`[DEV ONLY] Email to ${to}: ${text}`);
+    // Plain-text log (not JSON) so local dev and the E2E harness can read the
+    // link/code directly from the server console.
+    console.info(`[DEV ONLY] Email to ${to}: ${text}`);
     return;
   }
 
