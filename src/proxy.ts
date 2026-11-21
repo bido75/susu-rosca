@@ -29,7 +29,11 @@ export function proxy(req: NextRequest) {
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
     const origin = req.headers.get('origin');
     const expected = process.env.APP_URL ? new URL(process.env.APP_URL).origin : req.nextUrl.origin;
-    if (!origin || origin !== expected) {
+    // Native same-origin form POSTs (e.g. the HTML logout form) do NOT send an
+    // `Origin` header. Allow those, but reject any crossing, mismatched Origin
+    // (cross-origin fetches/forms always include Origin, so CSRF protection is
+    // preserved where it matters).
+    if (origin && origin !== expected) {
       return applyHeaders(NextResponse.json({ error: 'Invalid request origin' }, { status: 403 }));
     }
   }
