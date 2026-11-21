@@ -3,7 +3,7 @@
 // is a belt-and-suspenders guarantee that init runs before hydration under
 // Next 16 Turbopack.
 import * as Sentry from '@sentry/nextjs';
-import { replayIntegration, feedbackAsyncIntegration } from '@sentry/react';
+import { replayIntegration, feedbackIntegration } from '@sentry/react';
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
@@ -14,7 +14,22 @@ Sentry.init({
 
   tracesSampleRate: process.env.NODE_ENV === 'development' ? 1.0 : 0.1,
 
-  integrations: [replayIntegration(), feedbackAsyncIntegration({ colorScheme: 'system' })],
+  integrations: [
+    replayIntegration(),
+    // User Feedback ("Report a bug"). We disable the auto-injected floating
+    // button and instead attach the widget to our own in-app buttons (see
+    // components/ReportBugButton) so it never overlaps the mobile bottom nav
+    // or the sidebar account actions. The synchronous integration is used (not
+    // feedbackAsyncIntegration) so the widget loads eagerly and always works.
+    feedbackIntegration({
+      autoInject: false,
+      colorScheme: 'system',
+      enableScreenshot: true,
+      isNameRequired: false,
+      isEmailRequired: false,
+      formTitle: 'Report an issue',
+    }),
+  ],
 
   replaysSessionSampleRate: 0.1,
   replaysOnErrorSampleRate: 1.0,
