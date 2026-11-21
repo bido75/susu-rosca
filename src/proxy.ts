@@ -7,11 +7,12 @@ const BASE_HEADERS: Record<string, string> = {
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
   'Cross-Origin-Opener-Policy': 'same-origin',
   'Content-Security-Policy':
-    "default-src 'self'; script-src 'self' 'unsafe-inline'" +
+    "default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com" +
     (process.env.NODE_ENV === 'production' ? '' : " 'unsafe-eval'") +
     "; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; " +
-    // Sentry ingest + blob workers for Session Replay.
-    "connect-src 'self' https://*.ingest.us.sentry.io; worker-src 'self' blob:; " +
+    // Sentry ingest, Cloudflare Web Analytics beacon, and blob workers for Replay.
+    "connect-src 'self' https://*.ingest.us.sentry.io https://static.cloudflareinsights.com; " +
+    "worker-src 'self' blob:; " +
     "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'",
 };
 

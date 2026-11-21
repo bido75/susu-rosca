@@ -42,8 +42,10 @@ services:
       EVIDENCE_DIR: /app/data/evidence
       NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN}
       SENTRY_DSN: ${SENTRY_DSN}
-      # Real transactional email via cPanel SMTP when set in .env; otherwise
-      # falls back to the local Mailpit capture inbox for development.
+      # Transactional email via Resend when set; otherwise SMTP (cPanel), else
+      # the local Mailpit capture inbox for development.
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-}
       SMTP_HOST: ${SMTP_HOST:-mail}
       SMTP_PORT: ${SMTP_PORT:-1025}
       SMTP_USER: ${SMTP_USER:-susuflow}
