@@ -53,11 +53,30 @@ docker compose start app
 
 ## Off-machine storage
 
-The `backups` volume lives on this single host. For disaster recovery, copy dumps off-machine
-(e.g. to object storage) on your own schedule:
+The `backups` volume lives on this single host. For disaster recovery, the dumps are mirrored
+off-machine to **encrypted Nextcloud** storage automatically each day.
 
-```bash
-docker cp susuflow-beta-backups-1:/backups/daily/susuflow-latest.sql.gz ./susuflow-latest.sql.gz
+- `scripts/backup-offsite.ps1` copies the latest DB dump + the `evidence` volume to an
+  `rclone` `crypt` remote (`backupcrypt` → Nextcloud WebDAV). Files are encrypted **before**
+  they leave this machine, so Nextcloud admins only ever see ciphertext.
+- A Windows scheduled task `SusuFlowOffsiteBackup` runs it daily at 03:30 (`schtasks /Query /TN SusuFlowOffsiteBackup`).
+
+### Requirements
+
+- `rclone` installed (`~/.local/bin/rclone.exe`) with a `nextcloud` (webdav) and `backupcrypt` (crypt)
+  remote configured in `~/.config/rclone/rclone.conf`.
+- Nextcloud URL, a dedicated `backup` user, and its app password (used to build the config locally).
+
+### Manual run
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/backup-offsite.ps1
 ```
 
-The manual PowerShell helper (`scripts/backup.ps1`) remains available for one-off host-level dumps.
+### Restore from Nextcloud
+
+```powershell
+rclone copy backupcrypt:latest ./restore-stage
+```
+
+The DB dump is `restore-stage/susuflow-latest.sql.gz`; evidence is under `restore-stage/evidence/`.
