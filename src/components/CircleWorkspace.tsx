@@ -29,8 +29,10 @@ import {
   Trophy,
   UserRound,
   LogOut,
+  Bug,
   MoreHorizontal,
 } from 'lucide-react';
+import ReportBugButton from '@/components/ReportBugButton';
 
 type Member = {
   id: string;
@@ -633,13 +635,16 @@ export default function CircleWorkspace({
             <span>0% Interest • 100% Transparent</span>
           </div>
           <p className="leading-relaxed">Every member contributes equally and receives the full pooled lump sum once per rotation.</p>
-          <div className="flex items-center gap-3 pt-2 border-t border-slate-700/50 text-slate-300">
+          <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-700/50 text-slate-300">
             <Link href="/profile" className="hover:text-emerald-400 flex items-center gap-1.5">
               <UserRound className="w-3.5 h-3.5" /> Profile
             </Link>
             <Link href="/admin/audit" className="hover:text-emerald-400 flex items-center gap-1.5">
               <History className="w-3.5 h-3.5" /> Audit
             </Link>
+            <ReportBugButton className="hover:text-emerald-400 flex items-center gap-1.5">
+              <Bug className="w-3.5 h-3.5" /> Report a bug
+            </ReportBugButton>
             <form action="/api/auth/logout" method="post" className="flex items-center gap-1.5 hover:text-emerald-400">
               <LogOut className="w-3.5 h-3.5" />
               <button type="submit">Sign out</button>
@@ -1565,6 +1570,13 @@ export default function CircleWorkspace({
                 <History className="w-5 h-5 text-slate-500" />
                 Organizer Audit
               </Link>
+              <ReportBugButton
+                onClick={() => setShowMobileMenu(false)}
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-semibold text-slate-800 hover:bg-slate-50 text-left"
+              >
+                <Bug className="w-5 h-5 text-slate-500" />
+                Report a bug
+              </ReportBugButton>
               <form action="/api/auth/logout" method="post">
                 <button
                   type="submit"
