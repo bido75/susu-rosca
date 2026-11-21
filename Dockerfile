@@ -5,6 +5,13 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends openssl ca-c
 
 WORKDIR /app
 
+# Sentry DSNs are provided at build time (NEXT_PUBLIC_* is inlined into the
+# client bundle) and at runtime for the server SDK.
+ARG NEXT_PUBLIC_SENTRY_DSN
+ARG SENTRY_DSN
+ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
+ENV SENTRY_DSN=$SENTRY_DSN
+
 COPY package.json package-lock.json ./
 RUN npm ci
 

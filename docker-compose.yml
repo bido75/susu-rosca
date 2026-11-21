@@ -21,7 +21,11 @@ services:
       - "127.0.0.1:8026:8025"
 
   app:
-    build: .
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN}
+        SENTRY_DSN: ${SENTRY_DSN}
     restart: unless-stopped
     depends_on:
       db:
@@ -36,12 +40,23 @@ services:
       DATABASE_URL: postgresql://susuflow:susuflow@db:5432/susuflow?schema=public
       APP_URL: http://127.0.0.1:3210
       EVIDENCE_DIR: /app/data/evidence
+      NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN}
+      SENTRY_DSN: ${SENTRY_DSN}
       SMTP_HOST: mail
       SMTP_PORT: "1025"
       SMTP_USER: susuflow
       SMTP_PASSWORD: susuflow
       SMTP_FROM: "SusuFlow <no-reply@example.com>"
       COOKIE_SECURE: "false"
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      app:
+        condition: service_started
+    network_mode: service:app
 
   backups:
     image: prodrigestivill/postgres-backup-local:16
