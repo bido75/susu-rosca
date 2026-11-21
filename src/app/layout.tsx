@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
 import InstallPWA from '@/components/InstallPWA';
+import SentryUserContext from '@/components/SentryUserContext';
 
 export const metadata: Metadata = {
   title: 'SusuFlow | Save together. Grow together.',
@@ -38,6 +39,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         {children}
         <ServiceWorkerRegister />
         <InstallPWA />
+        <SentryUserContext />
       </body>
     </html>
   );

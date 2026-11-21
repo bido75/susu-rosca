@@ -25,8 +25,11 @@ Sentry.init({
       autoInject: false,
       colorScheme: 'system',
       enableScreenshot: true,
+      // The signed-in user's identity is attached via SentryUserContext
+      // (Sentry.setUser), and the form pre-fills name/email from that context.
       isNameRequired: false,
       isEmailRequired: false,
+      useSentryUser: { email: 'email', name: 'username' },
       formTitle: 'Report an issue',
     }),
   ],
