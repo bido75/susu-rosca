@@ -38,21 +38,24 @@ services:
       - "evidence:/app/data/evidence"
     environment:
       DATABASE_URL: postgresql://susuflow:susuflow@db:5432/susuflow?schema=public
-      APP_URL: http://127.0.0.1:3210
+      APP_URL: ${APP_URL:-http://127.0.0.1:3210}
       EVIDENCE_DIR: /app/data/evidence
       NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN}
       SENTRY_DSN: ${SENTRY_DSN}
-      SMTP_HOST: mail
-      SMTP_PORT: "1025"
-      SMTP_USER: susuflow
-      SMTP_PASSWORD: susuflow
-      SMTP_FROM: "SusuFlow <no-reply@example.com>"
-      COOKIE_SECURE: "false"
+      # Real transactional email via cPanel SMTP when set in .env; otherwise
+      # falls back to the local Mailpit capture inbox for development.
+      SMTP_HOST: ${SMTP_HOST:-mail}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_USER: ${SMTP_USER:-susuflow}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-susuflow}
+      SMTP_FROM: ${SMTP_FROM:-SusuFlow <no-reply@example.com>}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
 
   tunnel:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
     command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    network_mode: host
     depends_on:
       app:
         condition: service_started
