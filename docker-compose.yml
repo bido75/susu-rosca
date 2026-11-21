@@ -56,7 +56,9 @@ services:
   tunnel:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    # Force HTTP/2 (TCP) instead of QUIC/UDP — far more reliable on flaky
+    # residential/home networks where UDP to Cloudflare's edge drops.
+    command: tunnel --no-autoupdate --protocol http2 run --token ${CLOUDFLARE_TUNNEL_TOKEN}
     network_mode: host
     depends_on:
       app:
