@@ -56,7 +56,6 @@ services:
     depends_on:
       app:
         condition: service_started
-    network_mode: service:app
 
   backups:
     image: prodrigestivill/postgres-backup-local:16
