@@ -29,6 +29,7 @@ import {
   Trophy,
   UserRound,
   LogOut,
+  MoreHorizontal,
 } from 'lucide-react';
 
 type Member = {
@@ -183,6 +184,7 @@ export default function CircleWorkspace({
   const [uploading, setUploading] = useState(false);
   const [payoutRef, setPayoutRef] = useState('');
   const [target, setTarget] = useState('');
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const triggerToast = (title: string, message: string, type: 'success' | 'warning' | 'info' = 'success') => {
@@ -462,12 +464,43 @@ export default function CircleWorkspace({
 
   const freqShort = (f: string) => (f === 'MONTHLY' ? 'mo' : f === 'BIWEEKLY' ? '2wk' : 'wk');
 
+  const renderLedgerActions = (m: (typeof members)[number], c: Contribution | undefined) => (
+    <div className="flex flex-wrap items-center gap-2">
+      {organizer && c?.status === 'SUBMITTED' && (
+        <button disabled={busy} className="btn text-xs" onClick={() => act('verify', { contributionId: c.id })}>
+          Verify
+        </button>
+      )}
+      {organizer && (c?.status === 'SUBMITTED' || c?.status === 'PENDING') && (
+        <button
+          disabled={busy}
+          className="text-xs text-rose-600 font-semibold hover:underline"
+          onClick={() => {
+            if (confirm(`Mark ${m.user.fullName} as defaulted? This applies a -10 trust score change.`)) act('default', { contributionId: c.id });
+          }}
+        >
+          Default
+        </button>
+      )}
+      {organizer && c?.status === 'PENDING' && (
+        <button
+          disabled={busy}
+          className="text-xs text-emerald-700 font-semibold hover:underline"
+          onClick={() => act('remind', { userId: m.userId })}
+        >
+          Remind
+        </button>
+      )}
+      {!organizer && <span className="text-xs text-slate-500">{m.txRef || '—'}</span>}
+    </div>
+  );
+
   // ---- render ----
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col lg:flex-row font-sans">
       {/* TOAST */}
       {toast && (
-        <div className="fixed bottom-5 right-5 z-[60] max-w-md w-full px-4 pointer-events-none">
+        <div className="fixed bottom-24 sm:bottom-5 right-5 z-[60] max-w-md w-full px-4 pointer-events-none">
           <div
             className={`pointer-events-auto rounded-2xl shadow-xl border p-4 flex items-start gap-3 transition-all ${
               toast.type === 'warning'
@@ -498,7 +531,7 @@ export default function CircleWorkspace({
       )}
 
       {/* DARK SIDEBAR */}
-      <aside className="lg:w-72 bg-slate-900 text-slate-100 flex flex-col justify-between shrink-0 border-b lg:border-b-0 lg:border-r border-slate-800">
+      <aside className="pt-safe lg:w-72 bg-slate-900 text-slate-100 flex flex-col justify-between shrink-0 border-b lg:border-b-0 lg:border-r border-slate-800">
         <div>
           <div className="p-5 flex items-center justify-between border-b border-slate-800">
             <Link href="/circles" className="flex items-center gap-3">
@@ -566,7 +599,7 @@ export default function CircleWorkspace({
             </button>
           </div>
 
-          <nav className="p-3 flex lg:flex-col gap-1 overflow-x-auto">
+          <nav className="p-3 hidden lg:flex lg:flex-col gap-1">
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = activeTab === item.id;
@@ -616,7 +649,7 @@ export default function CircleWorkspace({
       </aside>
 
       {/* MAIN */}
-      <main className="flex-1 min-w-0 flex flex-col">
+      <main className="flex-1 min-w-0 flex flex-col pb-24 lg:pb-0">
         {!circle ? (
           <div className="flex-1 flex items-center justify-center p-8">
             {summaries.length === 0 ? (
@@ -1327,7 +1360,7 @@ export default function CircleWorkspace({
                         <h3 className="font-bold text-slate-900">Cycle {circle.currentCycle} Contribution Ledger</h3>
                         <p className="text-xs text-slate-500">Due {activeCycle ? fmtDate(activeCycle.dueDate) : '—'} · recipient {currentRecipient?.user.fullName ?? 'Not yet assigned'}</p>
                       </div>
-                      <div className="overflow-x-auto">
+                      <div className="hidden sm:block overflow-x-auto">
                         <table className="w-full text-left text-sm">
                           <thead className="bg-slate-50 text-slate-500">
                             <tr>
@@ -1374,39 +1407,55 @@ export default function CircleWorkspace({
                                   <td className="p-3">
                                     <span className={`pill ${c?.status === 'VERIFIED' ? '' : '!bg-amber-50 !text-amber-800'}`}>{m.currentCycleStatus}</span>
                                   </td>
-                                  <td className="p-3">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      {organizer && c?.status === 'SUBMITTED' && (
-                                        <button disabled={busy} className="btn text-xs" onClick={() => act('verify', { contributionId: c.id })}>
-                                          Verify
-                                        </button>
-                                      )}
-                                      {organizer && (c?.status === 'SUBMITTED' || c?.status === 'PENDING') && (
-                                        <button
-                                          disabled={busy}
-                                          className="text-xs text-rose-600 font-semibold hover:underline"
-                                          onClick={() => { if (confirm(`Mark ${m.user.fullName} as defaulted? This applies a -10 trust score change.`)) act('default', { contributionId: c.id }); }}
-                                        >
-                                          Default
-                                        </button>
-                                      )}
-                                      {organizer && c?.status === 'PENDING' && (
-                                        <button
-                                          disabled={busy}
-                                          className="text-xs text-emerald-700 font-semibold hover:underline"
-                                          onClick={() => act('remind', { userId: m.userId })}
-                                        >
-                                          Remind
-                                        </button>
-                                      )}
-                                      {!organizer && <span className="text-xs text-slate-500">{m.txRef || '—'}</span>}
-                                    </div>
-                                  </td>
+                                  <td className="p-3">{renderLedgerActions(m, c)}</td>
                                 </tr>
                               );
                             })}
                           </tbody>
                         </table>
+                      </div>
+
+                      {/* Mobile contribution ledger cards */}
+                      <div className="sm:hidden divide-y divide-slate-100">
+                        {members.map((m, idx) => {
+                          const c = contribByUser.get(m.userId);
+                          return (
+                            <div key={m.id} className="p-4 space-y-3">
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <span className={`w-9 h-9 rounded-full ${AVATAR_COLORS[idx % AVATAR_COLORS.length]} text-white text-xs font-bold flex items-center justify-center shrink-0`}>
+                                    {initials(m.user.fullName)}
+                                  </span>
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-semibold text-slate-900 truncate">{m.user.fullName}</p>
+                                    <p className="text-xs text-slate-500">{m.paymentMethod}</p>
+                                  </div>
+                                </div>
+                                <span className={`pill ${c?.status === 'VERIFIED' ? '' : '!bg-amber-50 !text-amber-800'} shrink-0`}>{m.currentCycleStatus}</span>
+                              </div>
+                              <div className="flex items-center justify-between gap-3 text-sm">
+                                <span className="text-xs text-slate-400 font-mono break-all min-w-0">{m.txRef || 'Awaiting transfer'}</span>
+                                <span className="font-bold text-slate-900 shrink-0">${contribution.toLocaleString()}</span>
+                              </div>
+                              {(organizer || m.userId === viewerId) && c?.evidence && c.evidence.length > 0 && (
+                                <div className="flex flex-wrap gap-1">
+                                  {c.evidence.map((e) => (
+                                    <a
+                                      key={e.id}
+                                      href={`/api/circles/${circle.id}/evidence/${e.id}`}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-emerald-700 underline text-[11px]"
+                                    >
+                                      📎 {e.fileName}
+                                    </a>
+                                  ))}
+                                </div>
+                              )}
+                              {renderLedgerActions(m, c)}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
@@ -1444,6 +1493,91 @@ export default function CircleWorkspace({
           </>
         )}
       </main>
+
+      {/* MOBILE BOTTOM NAV */}
+      <nav
+        className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-slate-200 flex items-stretch shadow-[0_-4px_12px_rgba(15,23,42,0.06)]"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        aria-label="Primary"
+      >
+        {[
+          { id: 'overview' as const, label: 'Overview', icon: LayoutDashboard },
+          { id: 'wheel' as const, label: 'Wheel', icon: CircleDot },
+          { id: 'ledger' as const, label: 'Ledger', icon: FileCheck },
+          { id: 'audit' as const, label: 'Audit', icon: History },
+        ].map((item) => {
+          const Icon = item.icon;
+          const active = activeTab === item.id;
+          const dot = item.id === 'wheel' && unassignedCount > 0;
+          return (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              aria-current={active ? 'page' : undefined}
+              className={`flex-1 relative flex flex-col items-center justify-center gap-1 py-2 text-[11px] font-semibold transition ${
+                active ? 'text-emerald-700' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <span className="relative">
+                <Icon className={`w-5 h-5 ${active ? 'text-emerald-600' : ''}`} />
+                {dot && <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-white" />}
+              </span>
+              {item.label}
+            </button>
+          );
+        })}
+        <button
+          onClick={() => setShowMobileMenu((v) => !v)}
+          aria-haspopup="menu"
+          aria-expanded={showMobileMenu}
+          className="flex-1 flex flex-col items-center justify-center gap-1 py-2 text-[11px] font-semibold text-slate-400 hover:text-slate-600 transition"
+        >
+          <MoreHorizontal className="w-5 h-5" />
+          More
+        </button>
+      </nav>
+
+      {/* MOBILE ACCOUNT MENU */}
+      {showMobileMenu && (
+        <div className="lg:hidden fixed inset-0 z-[85]">
+          <div className="absolute inset-0 bg-slate-950/40" onClick={() => setShowMobileMenu(false)} aria-hidden="true" />
+          <div
+            className="absolute inset-x-0 bottom-0 bg-white rounded-t-2xl border-t border-slate-200 shadow-2xl"
+            style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+            role="menu"
+            aria-label="Account menu"
+          >
+            <div className="p-2 pt-3">
+              <div className="mx-auto mb-2 w-10 h-1 rounded-full bg-slate-200" aria-hidden="true" />
+              <Link
+                href="/profile"
+                onClick={() => setShowMobileMenu(false)}
+                className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-semibold text-slate-800 hover:bg-slate-50"
+              >
+                <UserRound className="w-5 h-5 text-slate-500" />
+                Profile
+              </Link>
+              <Link
+                href="/admin/audit"
+                onClick={() => setShowMobileMenu(false)}
+                className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-semibold text-slate-800 hover:bg-slate-50"
+              >
+                <History className="w-5 h-5 text-slate-500" />
+                Organizer Audit
+              </Link>
+              <form action="/api/auth/logout" method="post">
+                <button
+                  type="submit"
+                  className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-semibold text-rose-600 hover:bg-rose-50 text-left"
+                >
+                  <LogOut className="w-5 h-5" />
+                  Sign out
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isCreateOpen && (
         <div className="fixed inset-0 z-[70] bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
