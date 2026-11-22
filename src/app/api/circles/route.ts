@@ -33,6 +33,7 @@ export async function POST(req: Request) {
           totalCycles: input.totalCycles,
           mode: input.mode,
           fairValueSlots: input.fairValueSlots ?? true,
+          fairValueBonusPercent: input.fairValueBonusPercent ?? 2,
           startDate: start,
           createdBy: user.id,
           inviteCode: 'SUSU-' + randomBytes(8).toString('hex').toUpperCase(),
