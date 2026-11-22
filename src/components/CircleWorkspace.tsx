@@ -31,6 +31,7 @@ import {
   LogOut,
   Bug,
   MoreHorizontal,
+  Settings,
 } from 'lucide-react';
 import ReportBugButton from '@/components/ReportBugButton';
 
@@ -74,6 +75,7 @@ type Circle = {
   status: string;
   mode: string;
   fairValueSlots: boolean;
+  fairValueBonusPercent: number;
   startDate: string;
   createdBy: string;
   members: Member[];
@@ -177,6 +179,7 @@ export default function CircleWorkspace({
   const [newFrequency, setNewFrequency] = useState('MONTHLY');
   const [newMode, setNewMode] = useState('LEDGER');
   const [newFairValue, setNewFairValue] = useState(true);
+  const [newFairValuePercent, setNewFairValuePercent] = useState(2);
   const [newTotalCycles, setNewTotalCycles] = useState(6);
   const [newStartDate, setNewStartDate] = useState(todayIso());
 
@@ -187,6 +190,9 @@ export default function CircleWorkspace({
   const [payoutRef, setPayoutRef] = useState('');
   const [target, setTarget] = useState('');
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [editingFairValue, setEditingFairValue] = useState(false);
+  const [fairValuePercent, setFairValuePercent] = useState(2);
+  const [fairValueEnabled, setFairValueEnabled] = useState(true);
 
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const triggerToast = (title: string, message: string, type: 'success' | 'warning' | 'info' = 'success') => {
@@ -302,6 +308,31 @@ export default function CircleWorkspace({
     }
   }
 
+  async function saveFairValue() {
+    if (!activeId) return;
+    setError('');
+    setBusy(true);
+    try {
+      const r = await fetch(`/api/circles/${activeId}/fair-value`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fairValueSlots: fairValueEnabled,
+          fairValueBonusPercent: Number(fairValuePercent) || 0,
+        }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || 'Unable to update fair-value settings');
+      await loadCircle(activeId);
+      setEditingFairValue(false);
+      triggerToast('Settings updated', 'Fair-value slot adjustment saved for this circle.');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Request failed');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function submitWithEvidence() {
     if (!activeId || txRef.trim().length < 3) return;
     setError('');
@@ -409,11 +440,16 @@ export default function CircleWorkspace({
   const ownContribution = activeCycle?.contributions.find((c) => c.userId === viewerId) ?? null;
 
   function getNetPayoutForSlot(slotNum: number | null): { amount: number; badge: string | null } {
-    if (!circle?.fairValueSlots || !slotNum || totalCycles < 4) return { amount: totalPot, badge: null };
-    const adjustment = Math.round(totalPot * 0.02);
-    if (slotNum === 1 || slotNum === 2) return { amount: totalPot - adjustment, badge: `-$${adjustment} (2% Early Slot Fee)` };
+    const pct = circle?.fairValueBonusPercent ?? 2;
+    // The adjustment is display guidance only — the platform never holds or
+    // moves money, so a 0% value cleanly removes the fee/bonus entirely.
+    if (!circle?.fairValueSlots || !slotNum || totalCycles < 4 || pct <= 0)
+      return { amount: totalPot, badge: pct <= 0 && circle?.fairValueSlots ? 'Standard 100% Pot' : null };
+    const adjustment = Math.round(totalPot * (pct / 100));
+    if (slotNum === 1 || slotNum === 2)
+      return { amount: totalPot - adjustment, badge: `-$${adjustment} (${pct}% Early Slot Fee)` };
     if (slotNum === totalCycles || slotNum === totalCycles - 1)
-      return { amount: totalPot + adjustment, badge: `+$${adjustment} (2% Anchor Bonus)` };
+      return { amount: totalPot + adjustment, badge: `+$${adjustment} (${pct}% Anchor Bonus)` };
     return { amount: totalPot, badge: 'Standard 100% Pot' };
   }
 
@@ -466,6 +502,7 @@ export default function CircleWorkspace({
           totalCycles: Number(newTotalCycles) || 4,
           mode: newMode,
           fairValueSlots: newFairValue,
+          fairValueBonusPercent: Number(newFairValuePercent) || 0,
           startDate: newStartDate || todayIso(),
         }),
       });
@@ -1000,7 +1037,7 @@ export default function CircleWorkspace({
                           <li>
                             • <strong>Fair-Value Slots:</strong>{' '}
                             {circle.fairValueSlots
-                              ? 'Enabled — Slots 1 & 2 contribute a 2% early-access fee distributed as a bonus to the final 2 anchor slots.'
+                              ? `Enabled — Slots 1 & 2 contribute a ${circle.fairValueBonusPercent ?? 2}% early-access fee distributed as a bonus to the final 2 anchor slots.`
                               : 'Disabled — Every slot receives the exact flat pot amount.'}
                           </li>
                           <li>
@@ -1126,11 +1163,65 @@ export default function CircleWorkspace({
                             <h3 className="font-bold text-slate-900">Official Payout Rotation Schedule</h3>
                             <p className="text-xs text-slate-500">
                               {circle.fairValueSlots
-                                ? 'Includes 2% Fair-Value Slot adjustment between early and anchor positions.'
+                                ? `Includes ${circle.fairValueBonusPercent ?? 2}% Fair-Value Slot adjustment between early and anchor positions.`
                                 : 'Standard equal pot distribution across all slots.'}
                             </p>
                           </div>
+                          {organizer && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFairValueEnabled(circle.fairValueSlots);
+                                setFairValuePercent(circle.fairValueBonusPercent ?? 2);
+                                setEditingFairValue((v) => !v);
+                              }}
+                              className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition shrink-0"
+                            >
+                              <Settings className="w-3.5 h-3.5" />
+                              {editingFairValue ? 'Cancel edit' : 'Edit settings'}
+                            </button>
+                          )}
                         </div>
+
+                        {organizer && editingFairValue && (
+                          <div className="px-5 py-4 border-b border-slate-100 bg-emerald-50/40">
+                            <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+                              <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                                <input
+                                  type="checkbox"
+                                  checked={fairValueEnabled}
+                                  onChange={(e) => setFairValueEnabled(e.target.checked)}
+                                  className="w-4 h-4 accent-emerald-600 rounded"
+                                />
+                                Enable Fair-Value adjustment
+                              </label>
+                              <label className="flex flex-col gap-1 text-xs font-semibold text-slate-500">
+                                Fee / Bonus %
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  step="0.5"
+                                  value={fairValuePercent}
+                                  onChange={(e) => setFairValuePercent(Number(e.target.value))}
+                                  disabled={!fairValueEnabled}
+                                  className="w-24 rounded-lg border border-slate-300 px-2 py-1.5 text-sm font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                />
+                              </label>
+                              <button
+                                type="button"
+                                onClick={saveFairValue}
+                                disabled={busy}
+                                className="inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white transition"
+                              >
+                                Save
+                              </button>
+                            </div>
+                            <p className="text-[11px] text-slate-500 mt-2">
+                              Set the % to 0 (or disable) to remove the early-slot fee / anchor bonus when members consider it unfair.
+                            </p>
+                          </div>
+                        )}
                         <div className="overflow-x-auto">
                           <table className="w-full text-left border-collapse">
                             <thead>
@@ -1714,8 +1805,23 @@ export default function CircleWorkspace({
                     <span>Enable Fair-Value Slot Incentives</span>
                   </div>
                   <p className="text-xs text-emerald-900/80 mt-0.5 leading-relaxed">
-                    Early recipients (Slots 1 & 2) contribute a 2% convenience fee paid as a bonus to the final anchor slots.
+                    Early recipients (Slots 1 &amp; 2) contribute a convenience fee paid as a bonus to the final anchor slots.
                   </p>
+                  {newFairValue && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-xs font-semibold text-emerald-950">Fee / Bonus %</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.5"
+                        value={newFairValuePercent}
+                        onChange={(e) => setNewFairValuePercent(Number(e.target.value))}
+                        className="w-20 rounded-lg border border-emerald-300 px-2 py-1.5 text-xs font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                      <span className="text-[11px] text-emerald-900/70">(0 = no adjustment)</span>
+                    </div>
+                  )}
                 </div>
                 <input type="checkbox" checked={newFairValue} onChange={(e) => setNewFairValue(e.target.checked)} className="mt-1 w-4 h-4 accent-emerald-600 rounded cursor-pointer" />
               </div>

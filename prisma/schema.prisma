@@ -130,6 +130,7 @@ model Circle {
   status             CircleStatus   @default(FORMING)
   mode               CircleMode     @default(LEDGER)
   fairValueSlots     Boolean        @default(true)
+  fairValueBonusPercent Decimal     @default(2.00) @db.Decimal(5, 2)
   inviteCode         String         @unique
   startDate          DateTime
   createdBy          String         @db.Uuid

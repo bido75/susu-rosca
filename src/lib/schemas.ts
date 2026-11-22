@@ -7,7 +7,16 @@ export const circleCreateSchema = z.object({
   totalCycles: z.number().int().min(2).max(30),
   mode: z.enum(['LEDGER', 'AUTOMATED_SIMULATED']),
   fairValueSlots: z.boolean().optional(),
+  fairValueBonusPercent: z.number().min(0).max(100).multipleOf(0.01).optional(),
   startDate: z.iso.date(),
+});
+
+// Organizer-only edit of the Fair-Value adjustment. `fairValueBonusPercent` of 0
+// removes the early-slot fee / anchor bonus entirely; `fairValueSlots` toggles
+// whether the adjustment is applied at all.
+export const circleFairValueSchema = z.object({
+  fairValueSlots: z.boolean(),
+  fairValueBonusPercent: z.number().min(0).max(100).multipleOf(0.01),
 });
 
 export const contributionSchema = z.object({
