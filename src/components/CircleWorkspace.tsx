@@ -251,24 +251,32 @@ export default function CircleWorkspace({
     setActiveTab(section);
   }, [section]);
 
-  // Navigate to the canonical URL for a section. Every tab/section control
-  // routes through this so that the view, URL, and browser history stay in sync
-  // (deep-linkable, back/forward works). `replace` is used when only the section
-  // changes within the same circle to avoid piling up history entries.
+  // On first render with circle content loaded, jump to the section the route
+  // (or URL hash) points at, so deep links like /circles/[id]/wheel still work.
+  useEffect(() => {
+    if (!circle) return;
+    const hash = window.location.hash.replace('#', '');
+    const target = hash || section;
+    if (target && ['overview', 'wheel', 'ledger', 'audit'].includes(target)) {
+      document.getElementById(target)?.scrollIntoView({ block: 'start' });
+    }
+    // Run once when the circle first becomes available.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [circle]);
+
+  // Scroll to a section within the single circle page. Every tab/section control
+  // routes through this so that clicking a tab reveals the matching section (the
+  // four sections are stacked on one page, each with a stable id). We also update
+  // the URL hash (deep-linkable #overview/#wheel/#ledger/#audit) via history
+  // replaceState so we don't pile up history entries or trigger a full re-fetch.
   function navigate(to: 'overview' | 'wheel' | 'ledger' | 'audit') {
     setActiveTab(to);
-    if (!activeId) return;
-    const path =
-      to === 'overview'
-        ? `/circles/${activeId}`
-        : `/circles/${activeId}/${to}`;
-    if (section === to || !section) {
-      // Same section we're already on (or landing with no explicit section):
-      // just sync the URL without adding a history entry.
-      router.replace(path);
-    } else {
-      router.push(path);
+    const el = document.getElementById(to);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+    const target = activeId ? `/circles/${activeId}#${to}` : `#${to}`;
+    window.history.replaceState(null, '', target);
   }
 
   async function act(path: string, body?: object) {
@@ -738,13 +746,13 @@ export default function CircleWorkspace({
                       Spin Payout Wheel
                     </button>
                   )}
-                  <Link
-                    href={`/circles/${circle.id}/ledger`}
+                  <button
+                    onClick={() => navigate('ledger')}
                     className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white shadow-sm transition cursor-pointer"
                   >
                     <FileCheck className="w-4 h-4 text-emerald-400" />
                     Cycle {circle.currentCycle} Ledger
-                  </Link>
+                  </button>
                   <button
                     className="btn-secondary text-xs sm:text-sm gap-1.5"
                     onClick={async () => {
@@ -842,7 +850,7 @@ export default function CircleWorkspace({
 
             <section className="px-5 sm:px-8 py-6 flex-1">
               <div className="max-w-6xl mx-auto">
-                {activeTab === 'overview' && (
+                <section id="overview" className="scroll-mt-24">
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-2 space-y-6">
                       <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950 text-white rounded-2xl p-6 shadow-md border border-slate-800">
@@ -1002,9 +1010,9 @@ export default function CircleWorkspace({
                       </div>
                     </div>
                   </div>
-                )}
+                </section>
 
-                {activeTab === 'wheel' && (
+                <section id="wheel" className="scroll-mt-24">
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                     <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col items-center text-center">
                       <div className="w-full flex items-center justify-between mb-2">
@@ -1262,9 +1270,9 @@ export default function CircleWorkspace({
                       </div>
                     </div>
                   </div>
-                )}
+                </section>
 
-                {activeTab === 'ledger' && (
+                <section id="ledger" className="scroll-mt-24">
                   <div className="space-y-6">
                     <div
                       className={`rounded-2xl border p-5 sm:p-6 transition ${
@@ -1480,9 +1488,9 @@ export default function CircleWorkspace({
                       </div>
                     </div>
                   </div>
-                )}
+                </section>
 
-                {activeTab === 'audit' && (
+                <section id="audit" className="scroll-mt-24">
                   <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                     <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                       <div>
@@ -1501,7 +1509,7 @@ export default function CircleWorkspace({
                       .
                     </div>
                   </div>
-                )}
+                </section>
               </div>
             </section>
 
