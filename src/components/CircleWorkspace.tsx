@@ -251,6 +251,26 @@ export default function CircleWorkspace({
     setActiveTab(section);
   }, [section]);
 
+  // Navigate to the canonical URL for a section. Every tab/section control
+  // routes through this so that the view, URL, and browser history stay in sync
+  // (deep-linkable, back/forward works). `replace` is used when only the section
+  // changes within the same circle to avoid piling up history entries.
+  function navigate(to: 'overview' | 'wheel' | 'ledger' | 'audit') {
+    setActiveTab(to);
+    if (!activeId) return;
+    const path =
+      to === 'overview'
+        ? `/circles/${activeId}`
+        : `/circles/${activeId}/${to}`;
+    if (section === to || !section) {
+      // Same section we're already on (or landing with no explicit section):
+      // just sync the URL without adding a history entry.
+      router.replace(path);
+    } else {
+      router.push(path);
+    }
+  }
+
   async function act(path: string, body?: object) {
     setError('');
     setBusy(true);
@@ -608,7 +628,7 @@ export default function CircleWorkspace({
               return (
                 <button
                   key={item.id}
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => navigate(item.id)}
                   aria-current={active ? 'page' : undefined}
                   className={`flex items-center justify-between gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition cursor-pointer ${
                     active ? 'bg-slate-800 text-emerald-400 shadow-inner' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
@@ -711,7 +731,7 @@ export default function CircleWorkspace({
                   <span className="text-xs font-mono text-slate-500 border border-slate-200 rounded-lg px-2 py-1">{circle.inviteCode}</span>
                   {organizer && circle.status === 'FORMING' && members.length === totalCycles && (
                     <button
-                      onClick={() => setActiveTab('wheel')}
+                      onClick={() => navigate('wheel')}
                       className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm transition cursor-pointer"
                     >
                       <CircleDot className="w-4 h-4" />
@@ -720,10 +740,6 @@ export default function CircleWorkspace({
                   )}
                   <Link
                     href={`/circles/${circle.id}/ledger`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setActiveTab('ledger');
-                    }}
                     className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white shadow-sm transition cursor-pointer"
                   >
                     <FileCheck className="w-4 h-4 text-emerald-400" />
@@ -846,7 +862,7 @@ export default function CircleWorkspace({
                             </p>
                           </div>
                           <button
-                            onClick={() => setActiveTab(currentRecipient ? 'ledger' : 'wheel')}
+                            onClick={() => navigate(currentRecipient ? 'ledger' : 'wheel')}
                             className={`shrink-0 font-semibold text-sm px-4 py-2.5 rounded-xl transition cursor-pointer ${
                               currentRecipient ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950' : 'bg-amber-400 hover:bg-amber-300 text-slate-950'
                             }`}
@@ -858,7 +874,7 @@ export default function CircleWorkspace({
                         <div className="mt-6 pt-5 border-t border-white/10">
                           <div className="flex items-center justify-between text-xs text-slate-400 mb-3">
                             <span>Full Rotation Order</span>
-                            <button onClick={() => setActiveTab('wheel')} className="text-emerald-400 hover:underline font-medium">
+                            <button onClick={() => navigate('wheel')} className="text-emerald-400 hover:underline font-medium">
                               Edit / Swap Slots →
                             </button>
                           </div>
@@ -896,7 +912,7 @@ export default function CircleWorkspace({
                               {verifiedCount} of {totalCycles} members verified (${collectedAmount.toLocaleString()} collected)
                             </p>
                           </div>
-                          <button onClick={() => setActiveTab('ledger')} className="text-xs font-semibold text-emerald-700 hover:text-emerald-800">
+                          <button onClick={() => navigate('ledger')} className="text-xs font-semibold text-emerald-700 hover:text-emerald-800">
                             Full Verification Ledger →
                           </button>
                         </div>
@@ -933,7 +949,7 @@ export default function CircleWorkspace({
                                 )}
                                 {member.currentCycleStatus === 'Pending' && (
                                   <button
-                                    onClick={() => setActiveTab('ledger')}
+                                    onClick={() => navigate('ledger')}
                                     className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer"
                                   >
                                     Submit Payment
@@ -950,7 +966,7 @@ export default function CircleWorkspace({
                       <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
                         <div className="flex items-center justify-between mb-4">
                           <h3 className="font-bold text-slate-900">Recent Circle Activity</h3>
-                          <button onClick={() => setActiveTab('audit')} className="text-xs font-semibold text-emerald-700 hover:underline">
+                          <button onClick={() => navigate('audit')} className="text-xs font-semibold text-emerald-700 hover:underline">
                             View All
                           </button>
                         </div>
@@ -1517,7 +1533,7 @@ export default function CircleWorkspace({
           return (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => navigate(item.id)}
               aria-current={active ? 'page' : undefined}
               className={`flex-1 relative flex flex-col items-center justify-center gap-1 py-2 text-[11px] font-semibold transition ${
                 active ? 'text-emerald-700' : 'text-slate-400 hover:text-slate-600'
