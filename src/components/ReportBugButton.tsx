@@ -15,24 +15,34 @@ import { getFeedback } from '@sentry/react';
 export default function ReportBugButton({
   className,
   children,
-  onClick,
+  onOpen,
 }: {
   className?: string;
   children: ReactNode;
-  onClick?: () => void;
+  /**
+   * Called once the Sentry feedback dialog actually opens. Use this (rather than
+   * a click handler) to close any surrounding UI — e.g. the mobile "More" sheet —
+   * because closing on `click` would unmount this button mid-click and race the
+   * dialog's async open, which prevents the form from appearing on mobile.
+   */
+  onOpen?: () => void;
 }) {
   const ref = useRef<HTMLButtonElement>(null);
+  const onOpenRef = useRef(onOpen);
+  onOpenRef.current = onOpen;
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const feedback = getFeedback();
     if (!feedback) return;
-    return feedback.attachTo(el);
+    return feedback.attachTo(el, {
+      onFormOpen: () => onOpenRef.current?.(),
+    });
   }, []);
 
   return (
-    <button type="button" ref={ref} className={className} onClick={onClick}>
+    <button type="button" ref={ref} className={className}>
       {children}
     </button>
   );

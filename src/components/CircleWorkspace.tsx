@@ -1571,7 +1571,7 @@ export default function CircleWorkspace({
                 Organizer Audit
               </Link>
               <ReportBugButton
-                onClick={() => setShowMobileMenu(false)}
+                onOpen={() => setShowMobileMenu(false)}
                 className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-semibold text-slate-800 hover:bg-slate-50 text-left"
               >
                 <Bug className="w-5 h-5 text-slate-500" />
