@@ -40,5 +40,59 @@ export const joinSchema = z.object({
   code: z.string().min(1).max(64),
 });
 
+// ---- Payout receiving methods (Phases 2-8) ----
+
+const payoutKinds = z.enum(['ZELLE', 'CASHAPP', 'VENMO']);
+
+// A member registers/updates their own payout receiving method. Only
+// Zelle / Cash App / Venmo are self-serve this release; ACH requires an approved
+// provider (not yet available) and CASH is exception-only.
+export const payoutMethodSchema = z.object({
+  kind: payoutKinds,
+  identifier: z.string().trim().min(2).max(120),
+  label: z.string().trim().min(1).max(60).optional(),
+  confirm: z.boolean().optional(), // member asserts the identifier is enrolled
+});
+
+export const payoutMethodStatusSchema = z.object({
+  status: z.enum(['ENTERED', 'CONFIRMED', 'DISABLED']),
+});
+
+// Circle-specific preference: which of the member's receiving methods to use.
+export const circlePayoutPreferenceSchema = z.object({
+  receivingMethodId: z.uuid(),
+});
+
+// Recipient confirms/reconfirms the instructions for the current cycle.
+export const cycleInstructionConfirmSchema = z.object({
+  receivingMethodId: z.uuid(),
+});
+
+// Recipient acknowledgment or discrepancy report.
+export const payoutAcknowledgmentSchema = z.object({
+  type: z.enum(['RECEIVED', 'NOT_RECEIVED', 'WRONG_AMOUNT', 'WRONG_IDENTIFIER', 'DUPLICATE', 'OTHER']),
+  note: z.string().trim().max(1000).optional(),
+});
+
+// Exceptional cash payout request (recipient submits).
+export const cashHandoffRequestSchema = z.object({
+  amount: z.number().min(1).max(100000).multipleOf(0.01),
+  reason: z.string().trim().min(3).max(1000),
+  proposedDate: z.iso.date(),
+  arrangement: z.string().trim().min(3).max(500),
+});
+
+// Organizer approves/rejects a cash request, optionally assigning a witness.
+export const cashHandoffReviewSchema = z.object({
+  approve: z.boolean(),
+  reason: z.string().trim().max(1000).optional(), // required on reject
+  witnessUserId: z.uuid().optional(), // required on approve
+});
+
+// Cash handoff confirmation (payer/recipient/witness, one per role).
+export const cashHandoffConfirmationSchema = z.object({
+  role: z.enum(['PAYER', 'RECIPIENT', 'WITNESS']),
+});
+
 export type CircleCreateInput = z.infer<typeof circleCreateSchema>;
 export type ContributionInput = z.infer<typeof contributionSchema>;

@@ -71,6 +71,42 @@ enum DisputeStatus {
   RESOLVED
 }
 
+enum PayoutMethodKind {
+  ZELLE
+  CASHAPP
+  VENMO
+  ACH
+  CASH
+}
+
+enum PayoutMethodStatus {
+  ENTERED
+  CONFIRMED
+  DISABLED
+}
+
+enum PayoutAcknowledgmentType {
+  RECEIVED
+  NOT_RECEIVED
+  WRONG_AMOUNT
+  WRONG_IDENTIFIER
+  DUPLICATE
+  OTHER
+}
+
+enum CashHandoffRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  DISPUTED
+}
+
+enum CashHandoffRole {
+  PAYER
+  RECIPIENT
+  WITNESS
+}
+
 model User {
   id                    String                 @id @default(uuid()) @db.Uuid
   email                 String                 @unique
@@ -96,6 +132,14 @@ model User {
   uploadedEvidence      ContributionEvidence[] @relation("EvidenceUploader")
   disputesRaised        Dispute[]              @relation("DisputeRaiser")
   disputesResolved      Dispute[]              @relation("DisputeResolver")
+  receivingMethods      PayoutReceivingMethod[] @relation("ReceivingMethodOwner")
+  payoutPreferences     CirclePayoutPreference[] @relation("PayoutPreferenceOwner")
+  payoutInstructions    CyclePayoutInstruction[] @relation("InstructionRecipient")
+  payoutAcknowledgments PayoutAcknowledgment[]  @relation("AcknowledgmentRecipient")
+  cashRequests          CashHandoffRequest[]     @relation("CashRecipient")
+  cashApprovals         CashHandoffRequest[]     @relation("CashApprover")
+  cashWitnessing        CashHandoffRequest[]     @relation("CashWitness")
+  cashConfirmations     CashHandoffConfirmation[] @relation("CashConfirmer")
 }
 
 model MagicLink {
@@ -142,6 +186,9 @@ model Circle {
   swaps              SlotSwap[]
   disbursements      Disbursement[]
   disputes           Dispute[]
+  payoutPreferences  CirclePayoutPreference[]
+  payoutInstructions CyclePayoutInstruction[]
+  cashHandoffRequests CashHandoffRequest[]
 }
 
 model CircleMember {
@@ -171,6 +218,9 @@ model Cycle {
   contributions   Contribution[]
   disbursements   Disbursement[]
   disputes        Dispute[]
+  payoutInstructions CyclePayoutInstruction[]
+  payoutAcknowledgments PayoutAcknowledgment[]
+  cashHandoffRequests CashHandoffRequest[]
 
   @@unique([circleId, cycleNumber])
 }
@@ -289,4 +339,126 @@ model Dispute {
   resolver    User?         @relation("DisputeResolver", fields: [resolvedBy], references: [id])
 
   @@index([circleId, status])
+}
+
+// A member-controlled method for *receiving* a Susu payout. Distinct from the
+// contribution PaymentMethod (how a member pays in). Identifiers are sensitive:
+// authorization-gated retrieval only; never exposed publicly or logged in full.
+model PayoutReceivingMethod {
+  id           String             @id @default(uuid()) @db.Uuid
+  userId       String             @db.Uuid
+  kind         PayoutMethodKind
+  identifier   String?
+  label        String?
+  status       PayoutMethodStatus @default(ENTERED)
+  isPreferred  Boolean            @default(false)
+  confirmedAt  DateTime?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  user         User               @relation("ReceivingMethodOwner", fields: [userId], references: [id], onDelete: Cascade)
+  preferences  CirclePayoutPreference[]
+  instructions CyclePayoutInstruction[]
+
+  @@index([userId])
+}
+
+// A member's per-circle payout preference — which receiving method to use for a
+// given circle. Does not alter membership, order, contributions, or trust.
+model CirclePayoutPreference {
+  id                String               @id @default(uuid()) @db.Uuid
+  circleId          String               @db.Uuid
+  userId            String               @db.Uuid
+  receivingMethodId String               @db.Uuid
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  circle            Circle               @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  user              User                 @relation("PayoutPreferenceOwner", fields: [userId], references: [id], onDelete: Cascade)
+  receivingMethod   PayoutReceivingMethod @relation(fields: [receivingMethodId], references: [id], onDelete: Cascade)
+
+  @@unique([circleId, userId])
+  @@index([circleId])
+}
+
+// A versioned snapshot of the confirmed recipient payout instructions for a
+// cycle. Updates create a new version and supersede the prior one (never
+// silently overwritten).
+model CyclePayoutInstruction {
+  id                String               @id @default(uuid()) @db.Uuid
+  circleId          String               @db.Uuid
+  cycleId           String               @db.Uuid
+  recipientUserId   String               @db.Uuid
+  receivingMethodId String               @db.Uuid
+  kind              PayoutMethodKind
+  identifier        String?
+  version           Int                  @default(1)
+  status            PayoutMethodStatus   @default(CONFIRMED)
+  supersededAt      DateTime?
+  confirmedAt       DateTime             @default(now())
+  createdAt         DateTime             @default(now())
+  circle            Circle               @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  cycle             Cycle                @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  recipient         User                 @relation("InstructionRecipient", fields: [recipientUserId], references: [id])
+  receivingMethod   PayoutReceivingMethod @relation(fields: [receivingMethodId], references: [id])
+
+  @@index([cycleId, version])
+  @@index([circleId, cycleId])
+}
+
+// Recipient acknowledgment (or discrepancy report). A self-reported claim, NOT
+// bank/provider settlement; never overrides organizer verification.
+model PayoutAcknowledgment {
+  id               String                  @id @default(uuid()) @db.Uuid
+  cycleId          String                  @db.Uuid
+  recipientUserId  String                  @db.Uuid
+  type             PayoutAcknowledgmentType
+  note             String?
+  createdAt        DateTime                @default(now())
+  cycle            Cycle                   @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  recipient        User                    @relation("AcknowledgmentRecipient", fields: [recipientUserId], references: [id])
+
+  @@index([cycleId])
+}
+
+// An exceptional cash payout request. Cash is not a normal payout preference:
+// it requires organizer approval, an independent witness, and three separate
+// handoff confirmations. Approval does not confirm cash changed hands.
+model CashHandoffRequest {
+  id               String                  @id @default(uuid()) @db.Uuid
+  circleId         String                  @db.Uuid
+  cycleId          String                  @db.Uuid
+  recipientUserId  String                  @db.Uuid
+  amount           Decimal                 @db.Decimal(12, 2)
+  reason           String
+  proposedDate     DateTime
+  arrangement      String
+  status           CashHandoffRequestStatus @default(PENDING)
+  approvedBy       String?                 @db.Uuid
+  approvedAt       DateTime?
+  rejectionReason  String?
+  witnessUserId    String?                 @db.Uuid
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  circle           Circle                  @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  cycle            Cycle                   @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  recipient        User                    @relation("CashRecipient", fields: [recipientUserId], references: [id])
+  approver         User?                   @relation("CashApprover", fields: [approvedBy], references: [id])
+  witness          User?                   @relation("CashWitness", fields: [witnessUserId], references: [id])
+  confirmations    CashHandoffConfirmation[]
+
+  @@index([circleId, status])
+}
+
+// Independent payer/recipient/witness confirmations of a cash handoff. Each role
+// confirms once and may only confirm facts it personally observed.
+model CashHandoffConfirmation {
+  id          String            @id @default(uuid()) @db.Uuid
+  handoffId   String            @db.Uuid
+  role        CashHandoffRole
+  userId      String            @db.Uuid
+  confirmedAt DateTime          @default(now())
+  handoff     CashHandoffRequest @relation(fields: [handoffId], references: [id], onDelete: Cascade)
+  user        User              @relation("CashConfirmer", fields: [userId], references: [id])
+
+  @@unique([handoffId, role])
+  @@index([handoffId])
 }

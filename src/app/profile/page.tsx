@@ -1,8 +1,9 @@
 import { currentUser } from '@/lib/auth';
 import { db } from '@/lib/db';
 import Link from 'next/link';
-import { ShieldCheck, ArrowLeft, Users } from 'lucide-react';
+import { ShieldCheck, ArrowLeft, Users, Wallet } from 'lucide-react';
 import KycRequest from '@/components/KycRequest';
+import PayoutMethodsManager from '@/components/PayoutMethodsManager';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,6 +53,18 @@ export default async function Profile() {
         <form action="/api/auth/logout" method="post">
           <button className="btn-secondary">Sign out</button>
         </form>
+      </div>
+
+      <div className="card">
+        <h2 className="font-bold flex items-center gap-2">
+          <Wallet size={18} /> My Payout Methods
+        </h2>
+        <p className="text-xs text-slate-500 mt-1">
+          Choose how you want to receive your Susu payout. Your identifiers are protected and only shown to members who need to pay you.
+        </p>
+        <div className="mt-3">
+          <PayoutMethodsManager />
+        </div>
       </div>
 
       <div className="card">
