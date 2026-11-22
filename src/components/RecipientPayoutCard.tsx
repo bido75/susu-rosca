@@ -1,0 +1,149 @@
+'use client';
+
+import { useCallback, useEffect, useState } from 'react';
+import { Wallet, Copy, Check, AlertCircle, BadgeCheck } from 'lucide-react';
+import { PAYOUT_KIND_LABEL } from '@/lib/payoutKinds';
+
+type Props = {
+  circleId: string;
+  viewerId: string;
+  recipientId: string | null;
+  recipientName: string | null;
+};
+
+type Instructions = {
+  id: string;
+  version: number;
+  kind: 'ZELLE' | 'CASHAPP' | 'VENMO' | 'ACH' | 'CASH';
+  label: string | null;
+  identifier: string;
+  confirmedAt: string;
+  recipientId: string;
+  recipientName: string | null;
+} | null;
+
+/**
+ * Shows the current cycle recipient's payout instructions to authorized members.
+ * The identifier is masked for everyone except the recipient (server enforced);
+ * the recipient can copy their own full identifier and acknowledge/dispute receipt.
+ */
+export default function RecipientPayoutCard({ circleId, viewerId, recipientId, recipientName }: Props) {
+  const [instructions, setInstructions] = useState<Instructions>(null);
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState('');
+  const [ack, setAck] = useState<'idle' | 'RECEIVED' | 'NOT_RECEIVED'>('idle');
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const isRecipient = recipientId !== null && recipientId === viewerId;
+
+  const load = useCallback(async () => {
+    try {
+      const r = await fetch(`/api/circles/${circleId}/payout-instructions`, { cache: 'no-store' });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || 'Unable to load instructions');
+      setInstructions(j.instructions ?? null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unable to load instructions');
+    }
+  }, [circleId]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function copyIdentifier() {
+    if (!instructions?.identifier) return;
+    try {
+      await navigator.clipboard.writeText(instructions.identifier);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function submitAck(type: 'RECEIVED' | 'NOT_RECEIVED') {
+    setBusy(true);
+    setError('');
+    try {
+      const r = await fetch(`/api/circles/${circleId}/payout-acknowledgment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, note: note || undefined }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || 'Unable to submit');
+      setAck(type);
+      setNote('');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unable to submit');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!recipientId) return null;
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+          <Wallet className="w-4 h-4 text-emerald-600" /> Recipient Payout Instructions
+        </h3>
+        {instructions && <BadgeCheck className="w-4 h-4 text-emerald-500" />}
+      </div>
+
+      <p className="text-sm text-slate-700">
+        <span className="font-semibold">{recipientName ?? 'The next recipient'}</span>
+      </p>
+
+      {!instructions ? (
+        <p className="text-xs text-slate-500 mt-2 flex items-center gap-1.5">
+          <AlertCircle className="w-4 h-4 text-amber-500" />
+          {isRecipient ? 'Confirm how you want to receive this payout.' : 'The recipient has not confirmed payout instructions yet.'}
+        </p>
+      ) : (
+        <div className="mt-2 space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-sm">
+              <span className="text-xs text-slate-400 mr-1.5">{PAYOUT_KIND_LABEL[instructions.kind]}</span>
+              <span className="font-mono font-semibold text-slate-800">{instructions.identifier}</span>
+              {instructions.label && <span className="text-xs text-slate-400 ml-1.5">({instructions.label})</span>}
+            </div>
+            <button onClick={copyIdentifier} className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-800 shrink-0">
+              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+          </div>
+          <p className="text-[11px] text-slate-400">
+            Confirm the recipient identity in the app before sending money. This is how the recipient wants to be paid this cycle.
+          </p>
+        </div>
+      )}
+
+      {isRecipient && (
+        <div className="mt-4 pt-3 border-t border-slate-100 space-y-2">
+          {ack === 'idle' ? (
+            <>
+              <p className="text-xs text-slate-500">Have you received this payout?</p>
+              <div className="flex flex-wrap gap-2">
+                <button onClick={() => submitAck('RECEIVED')} disabled={busy} className="btn text-xs">
+                  I received it
+                </button>
+                <button onClick={() => submitAck('NOT_RECEIVED')} disabled={busy} className="btn-secondary text-xs">
+                  Not received yet
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="text-xs font-semibold text-emerald-700">
+              {ack === 'RECEIVED' ? 'Acknowledgment recorded.' : 'Discrepancy reported to the organizer.'}
+            </p>
+          )}
+          {error && <p role="alert" className="text-xs text-red-600">{error}</p>}
+        </div>
+      )}
+    </div>
+  );
+}

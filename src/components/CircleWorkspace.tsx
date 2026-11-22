@@ -34,6 +34,8 @@ import {
   Settings,
 } from 'lucide-react';
 import ReportBugButton from '@/components/ReportBugButton';
+import RecipientPayoutCard from '@/components/RecipientPayoutCard';
+import CashHandoffPanel from '@/components/CashHandoffPanel';
 
 type Member = {
   id: string;
@@ -1008,6 +1010,13 @@ export default function CircleWorkspace({
                     </div>
 
                     <div className="space-y-6">
+                      <RecipientPayoutCard
+                        circleId={circle.id}
+                        viewerId={viewerId}
+                        recipientId={currentRecipient?.userId ?? null}
+                        recipientName={currentRecipient?.user.fullName ?? null}
+                      />
+
                       <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
                         <div className="flex items-center justify-between mb-4">
                           <h3 className="font-bold text-slate-900">Recent Circle Activity</h3>
@@ -1421,6 +1430,17 @@ export default function CircleWorkspace({
                         )}
                       </div>
                     </div>
+
+                    {!isRotationComplete && (
+                      <CashHandoffPanel
+                        circleId={circle.id}
+                        viewerId={viewerId}
+                        isOrganizer={organizer}
+                        isRecipient={currentRecipient?.userId === viewerId}
+                        recipientName={currentRecipient?.user.fullName ?? null}
+                        totalPot={totalPot}
+                      />
+                    )}
 
                     {ownContribution?.status === 'PENDING' && (
                       <div className="card">
