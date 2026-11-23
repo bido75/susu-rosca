@@ -4,6 +4,7 @@ import { requireUser, ApiError } from '@/lib/auth';
 import { failure, success } from '@/lib/http';
 import { lockCircle, audit } from '@/lib/circles';
 import { cashHandoffRequestSchema } from '@/lib/schemas';
+import { notifyOrganizer } from '@/lib/notifications';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,6 +60,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     });
 
     void notifyCircle(params.id);
+    notifyOrganizer(params.id, 'Cash payout requested', 'A recipient requested an exceptional cash payout. Review it in SusuFlow.');
     return success({ request: result }, 201);
   } catch (e) {
     return failure(e);

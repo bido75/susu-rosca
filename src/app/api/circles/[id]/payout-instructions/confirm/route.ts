@@ -4,6 +4,7 @@ import { requireUser, ApiError } from '@/lib/auth';
 import { failure, success } from '@/lib/http';
 import { lockCircle, audit } from '@/lib/circles';
 import { cycleInstructionConfirmSchema } from '@/lib/schemas';
+import { notifyCircleMembers } from '@/lib/notifications';
 
 // The assigned recipient confirms (or reconfirms) their payout instructions for
 // the current cycle. Creates a new versioned snapshot; a prior confirmed version
@@ -65,6 +66,14 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     });
 
     void notifyCircle(params.id);
+    // Tell the other members (except the recipient) that instructions changed,
+    // so they reconfirm before sending money. No sensitive data in the email.
+    notifyCircleMembers(
+      params.id,
+      'Payout instructions updated',
+      'The recipient updated how they want to receive this cycle\u2019s payout. Review the details in SusuFlow before sending money.',
+      result.recipientUserId,
+    );
     return success({ instruction: result });
   } catch (e) {
     return failure(e);

@@ -4,6 +4,7 @@ import { requireUser, ApiError } from '@/lib/auth';
 import { failure, success } from '@/lib/http';
 import { lockCircle, audit } from '@/lib/circles';
 import { payoutAcknowledgmentSchema } from '@/lib/schemas';
+import { notifyOrganizer } from '@/lib/notifications';
 
 // The assigned recipient acknowledgments receipt — or reports a discrepancy
 // (not received, wrong amount, wrong identifier, duplicate, other). This is a
@@ -45,6 +46,13 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     });
 
     void notifyCircle(params.id);
+    notifyOrganizer(
+      params.id,
+      result.type === 'RECEIVED' ? 'Recipient confirmed receipt' : 'Payout discrepancy reported',
+      result.type === 'RECEIVED'
+        ? 'The recipient acknowledged receiving this payout. Confirm it matches your records.'
+        : 'The recipient reported a payout discrepancy. Review it in SusuFlow.',
+    );
     return success({ acknowledgment: result }, 201);
   } catch (e) {
     return failure(e);

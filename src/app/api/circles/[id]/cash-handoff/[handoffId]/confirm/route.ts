@@ -4,6 +4,7 @@ import { requireUser, ApiError } from '@/lib/auth';
 import { failure, success } from '@/lib/http';
 import { lockCircle, audit } from '@/lib/circles';
 import { cashHandoffConfirmationSchema } from '@/lib/schemas';
+import { notifyOrganizer } from '@/lib/notifications';
 
 // Payer / recipient / witness independently confirm a cash handoff. Each role
 // confirms once, and may only confirm facts it personally observed. A payer may
@@ -51,6 +52,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string; ha
     });
 
     void notifyCircle(params.id);
+    notifyOrganizer(params.id, 'Cash handoff confirmation recorded', `A ${result.role.toLowerCase()} confirmation was recorded for an approved cash handoff.`);
     return success({ confirmation: result }, 201);
   } catch (e) {
     return failure(e);

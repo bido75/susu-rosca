@@ -203,7 +203,12 @@ export default function CashHandoffPanel({ circleId, viewerId, isOrganizer, isRe
             {handoff.status === 'PENDING' && isOrganizer && (
               <div className="space-y-2 pt-2 border-t border-slate-100">
                 {witnessOptions.length > 0 && (
-                  <select value={witnessSelect} onChange={(e) => setWitnessSelect(e.target.value)} className="field">
+                  <select
+                    aria-label="Choose an independent witness"
+                    value={witnessSelect}
+                    onChange={(e) => setWitnessSelect(e.target.value)}
+                    className="field"
+                  >
                     <option value="">Select an independent witness…</option>
                     {witnessOptions.map((w) => (
                       <option key={w.id} value={w.id}>{w.name}</option>
