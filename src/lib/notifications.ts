@@ -1,65 +1,90 @@
 import { db } from './db';
 import { sendMail } from './mail';
+import { sendSms } from './sms';
+import { sendPush } from './push';
 import { logger } from './logger';
 
 /**
- * Best-effort external notifications (email) for payout events.
+ * Best-effort external notifications for payout events, across all configured
+ * channels: email (always available via sendMail), Web Push (free, opt-in), and
+ * SMS (only when a provider is configured and the user has a phone number).
  *
- * Every notifier is fire-and-forget (`void`) and runs OUTSIDE any transaction or
- * advisory lock, so a slow or failing mail provider can never block or roll back
- * a financial mutation. Delivery failures are logged, never surfaced to the
- * caller. SMS and push are NOT configured (no provider / no Web Push plumbing),
- * so this module intentionally only sends email.
+ * Every notifier is fire-and-forget (`void`), runs OUTSIDE any transaction or
+ * advisory lock, and swallows delivery errors, so a slow or failing provider can
+ * never block or roll back a financial mutation.
  */
 
-async function trySend(to: string, subject: string, text: string): Promise<void> {
+interface Delivery {
+  to: string;
+  subject: string;
+  text: string;
+}
+
+async function trySendMail(d: Delivery): Promise<void> {
   try {
-    await sendMail({ to, subject, text });
+    await sendMail({ to: d.to, subject: d.subject, text: d.text });
   } catch (e) {
-    logger.error('Notification email failed', { to, message: e instanceof Error ? e.message : String(e) });
+    logger.error('Notification email failed', { to: d.to, message: e instanceof Error ? e.message : String(e) });
   }
 }
 
-/** Email a single user by id. */
-export function notifyUser(userId: string, subject: string, text: string): void {
-  void (async () => {
-    try {
-      const u = await db.user.findUnique({ where: { id: userId }, select: { email: true } });
-      if (u?.email) await trySend(u.email, subject, text);
-    } catch (e) {
-      logger.error('notifyUser failed', { userId, message: e instanceof Error ? e.message : String(e) });
-    }
-  })();
+async function trySendSms(to: string, text: string): Promise<void> {
+  try {
+    await sendSms(to, text);
+  } catch (e) {
+    logger.error('Notification sms failed', { to, message: e instanceof Error ? e.message : String(e) });
+  }
 }
 
-/** Email the circle organizer. */
+// Deliver to a single user across all channels. `text` doubles as the SMS body
+// (truncated for SMS length limits); push uses the email subject + text.
+async function deliver(userId: string, subject: string, text: string): Promise<void> {
+  try {
+    const u = await db.user.findUnique({
+      where: { id: userId },
+      select: { email: true, phoneNumber: true },
+    });
+    if (!u) return;
+
+    if (u.email) await trySendMail({ to: u.email, subject, text });
+    if (u.phoneNumber) await trySendSms(u.phoneNumber, text.slice(0, 300));
+    await sendPush(userId, subject, text);
+  } catch (e) {
+    logger.error('deliver notification failed', { userId, message: e instanceof Error ? e.message : String(e) });
+  }
+}
+
+/** Notify a single user by id. */
+export function notifyUser(userId: string, subject: string, text: string): void {
+  void deliver(userId, subject, text);
+}
+
+/** Notify the circle organizer. */
 export function notifyOrganizer(circleId: string, subject: string, text: string): void {
   void (async () => {
     try {
       const c = await db.circle.findUnique({
         where: { id: circleId },
-        select: { organizer: { select: { email: true } } },
+        select: { createdBy: true },
       });
-      if (c?.organizer.email) await trySend(c.organizer.email, subject, text);
+      if (c?.createdBy) await deliver(c.createdBy, subject, text);
     } catch (e) {
       logger.error('notifyOrganizer failed', { circleId, message: e instanceof Error ? e.message : String(e) });
     }
   })();
 }
 
-/** Email all circle members, optionally excluding a member (e.g. the actor). */
+/** Notify all circle members, optionally excluding a member (e.g. the actor). */
 export function notifyCircleMembers(circleId: string, subject: string, text: string, excludeUserId?: string): void {
   void (async () => {
     try {
       const c = await db.circle.findUnique({
         where: { id: circleId },
-        select: { name: true, members: { select: { userId: true, user: { select: { email: true } } } } },
+        select: { members: { select: { userId: true, user: { select: { email: true, phoneNumber: true } } } } },
       });
       if (!c) return;
-      const targets = c.members
-        .map((m) => ({ id: m.userId, email: m.user.email }))
-        .filter((m) => m.id !== excludeUserId && m.email);
-      await Promise.all(targets.map((m) => trySend(m.email!, subject, text)));
+      const targets = c.members.filter((m) => m.userId !== excludeUserId);
+      await Promise.all(targets.map((m) => deliver(m.userId, subject, text)));
     } catch (e) {
       logger.error('notifyCircleMembers failed', { circleId, message: e instanceof Error ? e.message : String(e) });
     }

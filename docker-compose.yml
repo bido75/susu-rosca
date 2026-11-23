@@ -26,6 +26,7 @@ services:
       args:
         NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN}
         SENTRY_DSN: ${SENTRY_DSN}
+        NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${NEXT_PUBLIC_VAPID_PUBLIC_KEY}
     restart: unless-stopped
     depends_on:
       db:
@@ -42,6 +43,15 @@ services:
       EVIDENCE_DIR: /app/data/evidence
       NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN}
       SENTRY_DSN: ${SENTRY_DSN}
+      # Web Push (server-side VAPID signing + client public key).
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:support@giscop.com}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${NEXT_PUBLIC_VAPID_PUBLIC_KEY:-}
+      # SMS via Twilio when configured (otherwise skipped; see src/lib/sms.ts).
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_FROM: ${TWILIO_FROM:-}
       # Transactional email via Resend when set; otherwise SMTP (cPanel), else
       # the local Mailpit capture inbox for development.
       RESEND_API_KEY: ${RESEND_API_KEY:-}

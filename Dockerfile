@@ -12,6 +12,11 @@ ARG SENTRY_DSN
 ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
 ENV SENTRY_DSN=$SENTRY_DSN
 
+# Web Push: the VAPID public key is inlined into the client bundle for
+# pushManager.subscribe(); the private key is read at runtime by the server only.
+ARG NEXT_PUBLIC_VAPID_PUBLIC_KEY
+ENV NEXT_PUBLIC_VAPID_PUBLIC_KEY=$NEXT_PUBLIC_VAPID_PUBLIC_KEY
+
 COPY package.json package-lock.json ./
 RUN npm ci
 

@@ -1,9 +1,10 @@
 import { currentUser } from '@/lib/auth';
 import { db } from '@/lib/db';
 import Link from 'next/link';
-import { ShieldCheck, ArrowLeft, Users, Wallet } from 'lucide-react';
+import { ShieldCheck, ArrowLeft, Users, Wallet, BellRing } from 'lucide-react';
 import KycRequest from '@/components/KycRequest';
 import PayoutMethodsManager from '@/components/PayoutMethodsManager';
+import PushNotifications from '@/components/PushNotifications';
 
 export const dynamic = 'force-dynamic';
 
@@ -64,6 +65,18 @@ export default async function Profile() {
         </p>
         <div className="mt-3">
           <PayoutMethodsManager />
+        </div>
+      </div>
+
+      <div className="card">
+        <h2 className="font-bold flex items-center gap-2">
+          <BellRing size={18} /> Notifications
+        </h2>
+        <p className="text-xs text-slate-500 mt-1">
+          Get alerted on your device when a payout is coming up, when instructions change, or when a cash handoff needs you.
+        </p>
+        <div className="mt-3">
+          <PushNotifications />
         </div>
       </div>
 
