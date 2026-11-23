@@ -4,6 +4,7 @@ import { requireUser, ApiError } from '@/lib/auth';
 import { failure, success } from '@/lib/http';
 import { organizerOnly, lockCircle, audit } from '@/lib/circles';
 import { cashHandoffReviewSchema } from '@/lib/schemas';
+import { notifyUser } from '@/lib/notifications';
 
 // Organizer approves/rejects an exceptional cash payout request. Approval does
 // NOT confirm cash changed hands — it only authorizes the handoff arrangement.
@@ -46,6 +47,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string; ha
     });
 
     void notifyCircle(params.id);
+    if (result.status === 'APPROVED' && result.witnessUserId) {
+      notifyUser(result.witnessUserId, 'You are a cash handoff witness', 'You have been assigned as the independent witness for a cash payout. Confirm the handoff in SusuFlow only if you personally observe it.');
+    } else if (result.status === 'REJECTED') {
+      notifyUser(result.recipientUserId, 'Cash payout request declined', 'Your cash payout request was declined by the organizer.');
+    }
     return success({ request: result });
   } catch (e) {
     return failure(e);

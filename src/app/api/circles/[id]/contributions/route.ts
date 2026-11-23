@@ -4,6 +4,7 @@ import { requireUser, ApiError } from '@/lib/auth';
 import { failure, success } from '@/lib/http';
 import { lockCircle, audit } from '@/lib/circles';
 import { contributionSchema } from '@/lib/schemas';
+import { notifyOrganizer } from '@/lib/notifications';
 
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
@@ -41,6 +42,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
       return { contribution: updated };
     });
       void notifyCircle(params.id);
+  notifyOrganizer(params.id, 'Payment reference submitted', 'A member submitted a payment reference. Review and verify it in SusuFlow.');
   return success(result);
   } catch (e) {
     return failure(e);
