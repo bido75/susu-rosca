@@ -94,5 +94,10 @@ export const cashHandoffConfirmationSchema = z.object({
   role: z.enum(['PAYER', 'RECIPIENT', 'WITNESS']),
 });
 
+// Member phone number for SMS notifications (normalized to E.164 server-side).
+export const phoneNumberSchema = z.object({
+  phoneNumber: z.string().trim().min(7).max(20),
+});
+
 export type CircleCreateInput = z.infer<typeof circleCreateSchema>;
 export type ContributionInput = z.infer<typeof contributionSchema>;
