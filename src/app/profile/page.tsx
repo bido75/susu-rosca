@@ -5,6 +5,7 @@ import { ShieldCheck, ArrowLeft, Users, Wallet, BellRing } from 'lucide-react';
 import KycRequest from '@/components/KycRequest';
 import PayoutMethodsManager from '@/components/PayoutMethodsManager';
 import PushNotifications from '@/components/PushNotifications';
+import PhoneNumberField from '@/components/PhoneNumberField';
 
 export const dynamic = 'force-dynamic';
 
@@ -75,8 +76,11 @@ export default async function Profile() {
         <p className="text-xs text-slate-500 mt-1">
           Get alerted on your device when a payout is coming up, when instructions change, or when a cash handoff needs you.
         </p>
-        <div className="mt-3">
+        <div className="mt-3 space-y-4">
           <PushNotifications />
+          <div className="pt-3 border-t border-slate-100">
+            <PhoneNumberField initial={user.phoneNumber} />
+          </div>
         </div>
       </div>
 
