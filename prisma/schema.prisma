@@ -140,6 +140,7 @@ model User {
   cashApprovals         CashHandoffRequest[]     @relation("CashApprover")
   cashWitnessing        CashHandoffRequest[]     @relation("CashWitness")
   cashConfirmations     CashHandoffConfirmation[] @relation("CashConfirmer")
+  pushSubscriptions     PushSubscription[]
 }
 
 model MagicLink {
@@ -461,4 +462,18 @@ model CashHandoffConfirmation {
 
   @@unique([handoffId, role])
   @@index([handoffId])
+}
+
+// A browser Web Push subscription for a user (one per device/endpoint). Used to
+// deliver in-app push notifications when the PWA is installed or the tab is open.
+model PushSubscription {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

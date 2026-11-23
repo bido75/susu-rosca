@@ -84,3 +84,40 @@ self.addEventListener('fetch', (event) => {
   // Everything else (API responses, dynamic pages, RSC payloads): network only.
   // No handler means the browser performs the request as normal.
 });
+
+// ---- Web Push (free, browser-native). Notification payloads come only from
+// our own server encrypting a JSON { title, body, url } — treated as data, not
+// instructions. No sensitive financial data is ever put into a push body. ----
+self.addEventListener('push', (event) => {
+  let data = { title: 'SusuFlow', body: '', url: '/circles' };
+  try {
+    if (event.data) data = { ...data, ...event.data.json() };
+  } catch {
+    /* ignore malformed payload */
+  }
+  const { title, body, url } = data;
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      data: { url },
+    }),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = (event.notification.data && event.notification.data.url) || '/circles';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) {
+          client.navigate(target);
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow(target);
+    }),
+  );
+});
