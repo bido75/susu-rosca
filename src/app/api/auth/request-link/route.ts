@@ -4,6 +4,7 @@ import { newToken, newCode, hashToken, ApiError } from '@/lib/auth';
 import { failure, success } from '@/lib/http';
 import { rateLimit, clientKey } from '@/lib/rate-limit';
 import { sendMail } from '@/lib/mail';
+import { sendSms } from '@/lib/sms';
 import { logger } from '@/lib/logger';
 
 export async function POST(req: Request) {
@@ -62,6 +63,23 @@ export async function POST(req: Request) {
         message: e instanceof Error ? e.message : String(e),
         to: normalized,
       });
+    }
+
+    // SMS delivery of the 6-digit code (not the link — too long for SMS). Only
+    // sent when the user has a phone number saved; best-effort like email.
+    if (user.phoneNumber) {
+      const smsBody = `Your SusuFlow sign-in code: ${code}. This code expires in 15 minutes.`;
+      if (process.env.NODE_ENV === 'development') {
+        console.info(`[DEV ONLY] SMS sign-in code for ${normalized} (${user.phoneNumber}): ${code}`);
+      }
+      try {
+        await sendSms(user.phoneNumber, smsBody);
+      } catch (e) {
+        logger.error('Sign-in SMS delivery failed', {
+          message: e instanceof Error ? e.message : String(e),
+          phone: user.phoneNumber,
+        });
+      }
     }
 
     return success({
